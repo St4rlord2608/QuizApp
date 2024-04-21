@@ -1,0 +1,43 @@
+﻿@using QuizApp.Models
+@using QuizApp.Services
+@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@inject UserService UserService
+@inject IJSRuntime JS
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <TopBar/>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+<div id="blazor-error-ui">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">🗙</a>
+</div>
+@code{
+    private string? username = "";
+    private int userID;
+    private User user = new User();
+    protected async override Task OnInitializedAsync()
+    {
+        /*Uri uri = new Uri(Navigation.Uri);
+        string relativePath = uri.GetComponents(UriComponents.Path, UriFormat.Unescaped);
+        string homeUrl = "";
+        if (!relativePath.Equals(homeUrl, StringComparison.OrdinalIgnoreCase))
+            {
+            Navigation.NavigateTo("/");
+        }*/
+    }
+
+    
+}

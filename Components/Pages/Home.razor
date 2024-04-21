@@ -1,0 +1,27 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.SignalR.Client
+@using Microsoft.AspNetCore.Http
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<PageTitle>Home</PageTitle>
+
+<label>Username: </label>
+<input @bind="username" @bind:event="oninput"/>
+
+@code {
+    private string username = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+
+    }
+
+
+    public async ValueTask DisposeAsync()
+    {
+        
+    }
+}

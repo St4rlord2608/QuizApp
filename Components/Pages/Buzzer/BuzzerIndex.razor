@@ -1,0 +1,71 @@
+﻿@page "/buzzer"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.SignalR
+@using Microsoft.AspNetCore.SignalR.Client
+@using QuizApp.Models
+@using QuizApp.Services
+@inject NavigationManager Navigation
+@inject BuzzerLobbyManagementService BuzzerService
+<h3>Buzzer</h3>
+<button @onclick="CreateLobbyCode">Host Lobby</button>
+<label>Lobby Code:</label>
+<input @bind="joinLobbyCode"/>
+<button @onclick="JoinLobby" >Join Lobby</button>
+@if (hostingFailed)
+{
+    <p>Hosting Failed. Please try again later</p>
+}
+@if (lobbyDoesntExist)
+{
+    <p>The lobby @joinLobbyCode doesnt exist</p>
+}
+
+@code {
+    private string hostUrl = "/buzzer/host/";
+    private string playUrl = "/buzzer/play/";
+    private string lobbyCode = "";
+    private string joinLobbyCode = "";
+    private bool hostingFailed = false;
+    private bool lobbyDoesntExist = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        
+    }
+
+    private void CreateLobbyCode()
+    {
+        hostingFailed = false;
+        int createAttempts = 0;
+        lobbyCode = BuzzerService.CreateLobbyCode();
+        BuzzerService.CheckForExpiredLobbies();
+        var lobbies = BuzzerService.GetLobbies().ToList();
+        while (lobbies.FindIndex(element => element.LobbyCode == lobbyCode) >= 0)
+        {
+            lobbyCode = BuzzerService.CreateLobbyCode();
+            createAttempts++;
+            if(createAttempts > 20)
+            {
+                hostingFailed = true;
+                return;
+            }
+
+        }
+        BuzzerService.AddLobby(lobbyCode);
+        Navigation.NavigateTo(hostUrl + lobbyCode);
+    }
+
+    private void JoinLobby()
+    {
+        var lobbies = BuzzerService.GetLobbies().ToList();
+        if(lobbies.FindIndex(element => element.LobbyCode == joinLobbyCode) < 0)
+        {
+            lobbyDoesntExist = true;
+        }
+        else
+        {
+            lobbyDoesntExist = false;
+            Navigation.NavigateTo(playUrl + joinLobbyCode);
+        }
+    }
+}

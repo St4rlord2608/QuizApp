@@ -1,0 +1,196 @@
+﻿@page "/buzzer/host/{lobbyId?}"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.SignalR.Client
+@using Microsoft.IdentityModel.Tokens
+@using QuizApp.Services
+@using QuizApp.Models
+@inject NavigationManager Navigation
+@inject BuzzerLobbyManagementService BuzzerService
+@inject UserService UserService
+@implements IAsyncDisposable
+
+<h3>BuzzerHost</h3>
+<label>Points for correct answer:</label>
+<input @bind="scorePoints"/>
+<button @onclick="UserScored" disabled="@(!lobbyData.IsBuzzed)">Score</button>
+<button @onclick="UserFailed" disabled="@(!lobbyData.IsBuzzed)">Fail</button>
+<button @onclick="ResetBuzzer" disabled="@(!lobbyData.IsBuzzed)">Reset Buzzer</button>
+<button @onclick="UnlockText">Unlock all texts</button>
+<table>
+    <tr>
+        <th>Username</th>
+        <th>Points</th>
+        <th>Answer</th>
+        <th>AnswerLocked</th>
+        <th>AnswerCorrect</th>
+    </tr>
+    @foreach (BuzzerLobby buzzerLobby in buzzerLobbies)
+    {
+        <tr>
+            <th>@UserDictionary[buzzerLobby.UserID].UserName</th>
+            <th><input type="number" value="@buzzerLobby.Points" onchange="@((ChangeEventArgs e) => UserPointsChanged(e, buzzerLobby))" /></th>
+            <th>@buzzerLobby.Text</th>
+            <th>@buzzerLobby.TextLocked</th>
+            <th><button disabled="@(!buzzerLobby.TextLocked)" onclick="@(() => UserTextIsCorrect(buzzerLobby))">Give Points</button></th>
+        </tr>
+    }
+</table>
+<p>@lobbyData.IsBuzzed</p>
+<p>@lobbyData.BuzzedUserID</p>
+
+@code {
+    [Parameter]
+    public string? lobbyId { get; set; }
+    private int scorePoints = 5;
+    public bool wasUploaded = false;
+    private int textClientID;
+    private string clientText = "";
+    private List<BuzzerLobby> buzzerLobbies = new List<BuzzerLobby>();
+    private Dictionary<int, User> UserDictionary = new Dictionary<int, User>();
+    private HubConnection? hubConnection;
+    private Lobby lobbyData;
+
+    protected override async Task OnInitializedAsync()
+    {
+        RefreshLobbyTime();
+        await InitHubConnection();
+        buzzerLobbies = BuzzerService.GetAllBuzzerLobbiesForLobby(lobbyId).ToList();
+        foreach(BuzzerLobby buzzerLobby in buzzerLobbies)
+        {
+            UserDictionary.Add(buzzerLobby.UserID, UserService.GetUser(buzzerLobby.UserID));
+        }
+        lobbyData = BuzzerService.GetLobby(lobbyId);
+        await hubConnection.StartAsync();
+        await hubConnection.SendAsync("AddToGroup", lobbyId);
+    }
+
+    private async Task InitHubConnection()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/buzzhub"))
+            .Build();
+
+        hubConnection.On<int, string, bool>("ReceiveBuzzChange", (userId, username, buzzState) =>
+        {
+            lobbyData.IsBuzzed = buzzState;
+            lobbyData.BuzzedUserID = userId;
+            InvokeAsync(StateHasChanged);
+        });
+        hubConnection.On<int, string, string>("ReceiveTextChange", (userId, username, text) =>
+        {
+            buzzerLobbies.First(buzzerLobby => buzzerLobby.UserID == userId).Text = text;
+            InvokeAsync(StateHasChanged);
+        });
+        hubConnection.On<int>("ReceiveTextLock", (userId) =>
+        {
+            buzzerLobbies.First(buzzerLobby => buzzerLobby.UserID == userId).TextLocked = true;
+            InvokeAsync(StateHasChanged);
+        });
+        hubConnection.On<int, string>("ReceiveJoinLobby", (userId, username) =>
+        {
+            buzzerLobbies.Add(BuzzerService.GetBuzzerLobby(lobbyData.LobbyCode, userId));
+            UserDictionary.Add(userId, UserService.GetUser(userId));
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private async void RefreshLobbyTime()
+    {
+        BuzzerService.RefreshLobbyTime(lobbyId);
+        await Task.Delay(1740000);
+        RefreshLobbyTime();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+
+    private async Task UserTextIsCorrect(BuzzerLobby buzzerLobby)
+    {
+        buzzerLobby.Points += scorePoints;
+        if(hubConnection is not null)
+        {
+            await hubConnection.SendAsync("ChangePoints", lobbyId, buzzerLobby.UserID, buzzerLobby.Points);
+        }
+        BuzzerService.UpdateBuzzerLobbyPoints(lobbyId, buzzerLobby.UserID, buzzerLobby.Points);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task UserPointsChanged(ChangeEventArgs changeEventArgs, BuzzerLobby buzzerLobby)
+    {
+        buzzerLobby.Points = Convert.ToInt32(changeEventArgs.Value);
+        if (hubConnection is not null)
+        {
+            await hubConnection.SendAsync("ChangePoints", lobbyId, buzzerLobby.UserID, buzzerLobby.Points);
+        }
+        BuzzerService.UpdateBuzzerLobbyPoints(lobbyId, buzzerLobby.UserID, buzzerLobby.Points);
+    }
+
+    private async Task UserScored()
+    {
+        foreach(BuzzerLobby buzzerLobby in buzzerLobbies)
+        {
+            int newPoints = buzzerLobby.Points;
+            if (buzzerLobby.UserID == lobbyData.BuzzedUserID)
+            {
+                newPoints = buzzerLobby.Points + scorePoints;
+            }
+            buzzerLobby.Points = newPoints;
+            await ChangePoints(buzzerLobby);
+        }
+        await ResetBuzzer();
+    }
+
+    private async Task UserFailed()
+    {
+        foreach (BuzzerLobby buzzerLobby in buzzerLobbies)
+        {
+            int newPoints = buzzerLobby.Points + 1;
+            if (buzzerLobby.UserID == lobbyData.BuzzedUserID)
+            {
+                newPoints = buzzerLobby.Points;
+            }
+            buzzerLobby.Points = newPoints;
+            await ChangePoints(buzzerLobby);
+        }
+        await ResetBuzzer();
+    }
+
+    private async Task ChangePoints(BuzzerLobby buzzerLobby)
+    {
+        BuzzerService.UpdateBuzzerLobbyPoints(lobbyId, buzzerLobby.UserID, buzzerLobby.Points);
+        if (hubConnection is not null)
+        {
+            await hubConnection.SendAsync("ChangePoints", lobbyId, buzzerLobby.UserID, buzzerLobby.Points);
+        }
+    }
+
+    private async Task ResetBuzzer()
+    {
+        lobbyData.IsBuzzed = false;
+        lobbyData.BuzzedUserID = 0;
+        BuzzerService.ChangeBuzzedStateForLobby(lobbyId, lobbyData.IsBuzzed, lobbyData.BuzzedUserID);
+        if (hubConnection is not null)
+        {
+            await hubConnection.SendAsync("ChangeBuzz", lobbyId, 0, "Host", false);
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task UnlockText()
+    {
+        foreach(BuzzerLobby buzzerLobby in buzzerLobbies)
+        {
+            buzzerLobby.TextLocked = false;
+        }
+        if (hubConnection is not null)
+        {
+            await hubConnection.SendAsync("ResetTextLock", lobbyId);
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+}

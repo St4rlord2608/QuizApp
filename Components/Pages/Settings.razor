@@ -1,0 +1,10 @@
+﻿@page "/settings"
+@rendermode InteractiveServer
+
+<h3>Settings</h3>
+<label>Username:</label>
+<input @bind="username"/>
+
+@code {
+    private string username = "";
+}

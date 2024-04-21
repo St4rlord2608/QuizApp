@@ -1,0 +1,62 @@
+﻿@using QuizApp.Models
+@using QuizApp.Services
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+@inject UserService UserService
+@inject IJSRuntime JS
+
+<div class="top-row px-4">
+    <input @bind="username" @bind:after="OnUsernameChange" class="username-input" />
+</div>
+
+@code {
+    private string? username = "";
+    private int userID;
+    private User user = new User();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            username = await JS.InvokeAsync<string>("GetFromLocalStorage", "username");
+            string? userIDString = await JS.InvokeAsync<string>("GetFromLocalStorage", "userID");
+            if (userIDString == null)
+            {
+                user = UserService.CreateUser("Guest");
+                await JS.InvokeVoidAsync("AddToLocalStorage", "username", user.UserName);
+                await JS.InvokeVoidAsync("AddToLocalStorage", "userID", user.UserID);
+                username = user.UserName;
+            }
+            else if (username == null)
+            {
+                userID = Convert.ToInt32(userIDString);
+                user = UserService.GetUser(userID);
+                username = user.UserName;
+            }
+            else
+            {
+                userID = Convert.ToInt32(userIDString);
+                user.UserID = userID;
+                user.UserName = username;
+            }
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task OnUsernameChange()
+    {
+        await SaveUsernameCookie(username);
+        UpdateUsernameDB(username);
+    }
+
+    private async Task SaveUsernameCookie(string username)
+    {
+        await JS.InvokeVoidAsync("AddToLocalStorage", "username", username);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void UpdateUsernameDB(string username)
+    {
+        UserService.UpdateUserName(userID, username);
+    }
+}

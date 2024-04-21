@@ -1,0 +1,89 @@
+﻿@page "/buzzer/play" 
+@using Microsoft.AspNetCore.SignalR.Client
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+
+
+<h3>Buzzer</h3>
+<input @bind="username" @bind:event="oninput" @bind:after="OnWrite"/>
+<div>@username</div>
+<div>@usernameCopy</div>
+<button class="buzzer"  @onclick="Buzz" disabled="@isBuzzed">Buzz</button>
+<button class="buzzer" @onclick="ResetBuzz" disabled="@isNotBuzzed">Reset</button>
+
+@if (isBuzzed)
+{
+    <div>@buzzeredUsername</div>
+    <div>@buzzeredUserId</div>
+}
+
+@code {
+    private string username = "";
+    private string usernameCopy = "";
+    private string buzzeredUsername = "";
+    private string buzzeredUserId = "";
+    private int userId = new Random().Next(999999999);
+    private HubConnection? hubConnection;
+    private bool isBuzzed = false;
+    private bool isNotBuzzed = true;
+    public bool IsBuzzed
+    {
+        get { return isBuzzed; }
+        set
+        {
+            isBuzzed = value;
+            isNotBuzzed = !value;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/buzzhub"))
+            .Build();
+
+        hubConnection.On<string, string, bool>("ReceiveBuzzChange", (userId, username, buzzState) =>
+        {
+            buzzeredUserId = userId;
+            buzzeredUsername = username;
+            IsBuzzed = buzzState;
+            InvokeAsync(StateHasChanged);
+        });
+
+        await hubConnection.StartAsync();
+    }
+
+    private async Task Buzz()
+    {
+        buzzeredUserId = userId.ToString();
+        buzzeredUsername = username;
+        IsBuzzed = true;
+        if (hubConnection is not null)
+        {
+            await hubConnection.SendAsync("ChangeBuzz", userId.ToString(), username, isBuzzed);
+        }
+    }
+
+    private async Task ResetBuzz()
+    {
+        IsBuzzed = false;
+        if (hubConnection is not null)
+        {
+            await hubConnection.SendAsync("ChangeBuzz", userId.ToString(), username, isBuzzed);
+        }
+    }
+
+    private void OnWrite()
+    {
+        usernameCopy = username;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+
+}

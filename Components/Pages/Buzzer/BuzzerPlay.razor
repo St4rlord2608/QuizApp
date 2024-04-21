@@ -1,0 +1,158 @@
+﻿@page "/buzzer/play/{lobbyId?}"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.SignalR.Client
+@using Microsoft.IdentityModel.Tokens
+@using QuizApp.Models
+@using QuizApp.Services
+@inject NavigationManager Navigation
+@inject BuzzerLobbyManagementService BuzzerService
+@inject IJSRuntime JS
+@inject UserService UserService
+@implements IAsyncDisposable
+
+<h3>BuzzerPlay</h3>
+<label>Input:</label>
+<input disabled="@buzzerLobby.TextLocked" @bind="text" @bind:event="oninput" @bind:after="InputChange" />
+<button disabled="@buzzerLobby.TextLocked" @onclick="LockText">Lock answer</button>
+<button @onclick="Buzz" disabled="@lobbyData.IsBuzzed">Buzzer</button>
+<p>isbuzzed = @lobbyData.IsBuzzed</p>
+<p>@points</p>
+<p>@lobbyData.IsBuzzed</p>
+<p>@UserDictionary.Count</p>
+<table>
+    <tr>
+        <th>Username</th>
+        <th>Points</th>
+    </tr>
+    @foreach (BuzzerLobby buzzerLobby in buzzerLobbies)
+    {
+        <tr>
+            <th>@UserDictionary[buzzerLobby.UserID].UserName</th>
+            <th>@buzzerLobby.Points</th>
+        </tr>
+    }
+</table>
+
+@code {
+    [Parameter]
+    public string? lobbyId { get; set; }
+    private string text = "";
+    private string username = "";
+    private int userID;
+    private int points;
+    private BuzzerLobby buzzerLobby;
+    private List<BuzzerLobby> buzzerLobbies = new List<BuzzerLobby>();
+    private Dictionary<int, User> UserDictionary = new Dictionary<int, User>();
+    private Lobby lobbyData;
+
+    private HubConnection? hubConnection;
+
+    protected override async Task OnInitializedAsync()
+    {
+        buzzerLobbies = BuzzerService.GetAllBuzzerLobbiesForLobby(lobbyId).ToList();
+        foreach (BuzzerLobby buzzerLobby in buzzerLobbies)
+        {
+            UserDictionary.Add(buzzerLobby.UserID, UserService.GetUser(buzzerLobby.UserID));
+        }
+        lobbyData = BuzzerService.GetLobby(lobbyId);
+        await InitHubConnection();
+        await hubConnection.StartAsync();
+        await hubConnection.SendAsync("AddToGroup", lobbyId);
+    }
+
+    private async Task InitHubConnection()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/buzzhub"))
+            .Build();
+
+        hubConnection.On<int, string, bool>("ReceiveBuzzChange", (userId, username, buzzState) =>
+        {
+            lobbyData.IsBuzzed = buzzState;
+            lobbyData.BuzzedUserID = userID;
+            InvokeAsync(StateHasChanged);
+        });
+        hubConnection.On<int, int>("ReceiveChangePoints", (changeUserID, newPoints) =>
+        {
+            if (userID == changeUserID)
+            {
+                points = newPoints;
+            }
+            buzzerLobbies.First(buzzerLobby => buzzerLobby.UserID == changeUserID).Points = newPoints;
+            InvokeAsync(StateHasChanged);
+        });
+        hubConnection.On<int, string>("ReceiveJoinLobby", (userId, username) =>
+        {
+            AddBuzzerLobby(userId);
+            InvokeAsync(StateHasChanged);
+        });
+        hubConnection.On("ReceiveResetTextLock", () =>
+        {
+            buzzerLobby.TextLocked = false;
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            username = await JS.InvokeAsync<string>("GetFromLocalStorage", "username");
+            userID = Convert.ToInt32(await JS.InvokeAsync<string>("GetFromLocalStorage", "userID"));
+            buzzerLobby = BuzzerService.GetBuzzerLobby(lobbyId, userID);
+            if (buzzerLobby.LobbyCode == null)
+            {
+                BuzzerService.AddBuzzerLobby(lobbyId, userID, 0);
+                buzzerLobby = new BuzzerLobby() { LobbyCode = lobbyId, UserID = userID, Points = 0 };
+                var existingLobbies = buzzerLobbies.Where(buzzerLobby => buzzerLobby.UserID == userID);
+                await hubConnection.SendAsync("JoinedLobby", lobbyData.LobbyCode, userID, username);
+                await AddBuzzerLobby(userID);
+            }
+            points = buzzerLobby.Points;
+            await InvokeAsync(StateHasChanged);
+        } 
+    }
+
+    private async Task AddBuzzerLobby(int userId)
+    {
+        buzzerLobbies.Add(BuzzerService.GetBuzzerLobby(lobbyData.LobbyCode, userId));
+        UserDictionary.Add(userId, UserService.GetUser(userId));
+    }
+
+    private async void InputChange()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.SendAsync("TextInputChange", lobbyId, userID, username, text);
+        }
+    }
+
+    private async void Buzz()
+    {
+        lobbyData.IsBuzzed = !lobbyData.IsBuzzed;
+        BuzzerService.ChangeBuzzedStateForLobby(lobbyId, lobbyData.IsBuzzed, userID);
+        if (hubConnection is not null)
+        {
+            await hubConnection.SendAsync("ChangeBuzz", lobbyId, userID, username, lobbyData.IsBuzzed);
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void LockText()
+    {
+        buzzerLobby.TextLocked = true;
+        if (hubConnection is not null)
+        {
+            await hubConnection.SendAsync("TextLock", lobbyId, userID);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.StopAsync();
+            await hubConnection.DisposeAsync();
+        }
+    }
+}
