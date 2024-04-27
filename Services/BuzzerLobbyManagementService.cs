@@ -45,7 +45,12 @@ namespace QuizApp.Services
             _buzzerRepository.DeleteLobby(lobbyCode);
         }
 
-        public void RefreshLobbyTime(string lobbyCode)
+        public void DeleteBuzzerLobby(string lobbyCode, int userID)
+        { 
+            _buzzerRepository.DeleteBuzzerLobby(lobbyCode,  userID);
+        }
+
+            public void RefreshLobbyTime(string lobbyCode)
         {
             _buzzerRepository.UpdateLobbyCreationDateTime(lobbyCode, DateTime.Now);
         }
@@ -76,7 +81,12 @@ namespace QuizApp.Services
             _buzzerRepository.ChangeBuzzedStateForLobby(lobbyCode, isBuzzed, userID);
         }
 
-        public IEnumerable<BuzzerLobby> GetAllBuzzerLobbiesForLobby(string lobbyCode)
+        public void ChangeTextLockedStateForBuzzerLobby(string lobbyCode, bool textLocked, int userID)
+        {
+            _buzzerRepository.ChangeTextLockedStateForBuzzerLobby(lobbyCode, textLocked, userID);
+        }
+
+            public IEnumerable<BuzzerLobby> GetAllBuzzerLobbiesForLobby(string lobbyCode)
         {
             return _buzzerRepository.GetAllBuzzerLobbiesForLobby(lobbyCode);
         }

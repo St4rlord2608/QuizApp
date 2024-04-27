@@ -13,6 +13,11 @@ namespace QuizApp.Hubs
             await Clients.Group(groupName).SendAsync("ReceiveTextChange", userID, username, text);
         }
 
+        public async Task TextForPlayersChange(string groupName, string text)
+        {
+            await Clients.Group(groupName).SendAsync("ReceiveTextForPlayersChange", text);
+        }
+
         public async Task TextLock(string groupName, int userID)
         {
             await Clients.Group(groupName).SendAsync("ReceiveTextLock", userID);
@@ -21,6 +26,11 @@ namespace QuizApp.Hubs
         public async Task ResetTextLock(string groupName)
         {
             await Clients.Group(groupName).SendAsync("ReceiveResetTextLock");
+        }
+
+        public async Task ResetSingleTextLock(string groupName, int userID)
+        {
+            await Clients.Group(groupName).SendAsync("ReceiveResetSingleTextLock", userID);
         }
 
         public async Task AddToGroup(string groupName)
@@ -37,6 +47,20 @@ namespace QuizApp.Hubs
         {
             await Clients.Group(groupName).SendAsync("ReceiveJoinLobby", userID, username);
         }
-        
+
+        public async Task LeaveLobby(string groupName, int userID)
+        {
+            await Clients.Group(groupName).SendAsync("ReceiveLeaveLobby", userID);
+        }
+
+        public async Task ReJoinLoby(string groupName, int userID)
+        {
+            await Clients.Group(groupName).SendAsync("ReceiveReJoinLobby", userID);
+        }
+
+        public async Task KickPlayer(string groupName, int userID)
+        {
+            await Clients.Group(groupName).SendAsync("ReceiveKickPlayer", userID);
+        }
     }
 }
