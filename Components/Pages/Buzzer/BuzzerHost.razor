@@ -7,48 +7,74 @@
 @inject NavigationManager Navigation
 @inject BuzzerLobbyManagementService BuzzerService
 @inject UserService UserService
+@inject IJSRuntime JS
 @implements IAsyncDisposable
 
-<h3>BuzzerHost</h3>
-<label>Points for correct answer:</label>
-<input @bind="scorePoints"/>
-<button @onclick="UserScored" disabled="@(!lobbyData.IsBuzzed)">Score</button>
-<button @onclick="UserFailed" disabled="@(!lobbyData.IsBuzzed)">Fail</button>
-<button @onclick="ResetBuzzer" disabled="@(!lobbyData.IsBuzzed)">Reset Buzzer</button>
-<button @onclick="UnlockText">Unlock all texts</button>
-<table>
-    <tr>
-        <th>Username</th>
-        <th>Points</th>
-        <th>Answer</th>
-        <th>AnswerLocked</th>
-        <th>AnswerCorrect</th>
-    </tr>
-    @foreach (BuzzerLobby buzzerLobby in buzzerLobbies)
-    {
+@if(lobbyData.LobbyCode != null)
+{
+    <button onclick="copyToClipboard()">Copy Lobby code</button>
+    <h3>BuzzerHost</h3>
+    <label>Points for correct answer:</label>
+    <input @bind="scorePoints" />
+    <label>Points for incorrect answer:</label>
+    <input @bind="failPoints" />
+    <label>Text for players:</label>
+    <input @bind="textForPlayers" @bind:after="TextForPlayersChange" />
+    <button @onclick="UserScored" disabled="@(!lobbyData.IsBuzzed)">Score</button>
+    <button @onclick="UserFailed" disabled="@(!lobbyData.IsBuzzed)">Fail</button>
+    <button @onclick="ChangeBuzzerState">@buzzerText</button>
+    <button @onclick="UnlockText">Unlock all texts</button>
+    <p>Buzzed user: @buzzedUserName</p>
+    <table>
         <tr>
-            <th>@UserDictionary[buzzerLobby.UserID].UserName</th>
-            <th><input type="number" value="@buzzerLobby.Points" onchange="@((ChangeEventArgs e) => UserPointsChanged(e, buzzerLobby))" /></th>
-            <th>@buzzerLobby.Text</th>
-            <th>@buzzerLobby.TextLocked</th>
-            <th><button disabled="@(!buzzerLobby.TextLocked)" onclick="@(() => UserTextIsCorrect(buzzerLobby))">Give Points</button></th>
+            <th>Kick</th>
+            <th>Username</th>
+            <th>Points</th>
+            <th>Answer</th>
+            <th>AnswerLocked</th>
+            <th>AnswerCorrect</th>
+            <th>Unlock Text</th>
         </tr>
+        @foreach (BuzzerLobby buzzerLobby in buzzerLobbies)
+        {
+            <tr id="user-data-@buzzerLobby.UserID">
+                <th><button onclick="@(() => KickPlayer(buzzerLobby))">Kick</button></th>
+                <th>@UserDictionary[buzzerLobby.UserID].UserName</th>
+                <th><input type="number" value="@buzzerLobby.Points" onchange="@((ChangeEventArgs e) => UserPointsChanged(e, buzzerLobby))" /></th>
+                <th>@buzzerLobby.Text</th>
+                <th>@buzzerLobby.TextLocked</th>
+                <th><button disabled="@(!buzzerLobby.TextLocked)" onclick="@(() => UserTextIsCorrect(buzzerLobby))">Give Points</button></th>
+                <th><button disabled="@(!buzzerLobby.TextLocked)" onclick="@(() => UnlockSingleText(buzzerLobby))">Unlock Text</button></th>
+            </tr>
+        }
+    </table>
+    <p>@lobbyData.IsBuzzed</p>
+    <p>@lobbyData.BuzzedUserID</p>
+}
+else
+{
+    <div>lobby doesnt exist</div>
+}
+
+<script>
+    function copyToClipboard() {
+        navigator.clipboard.writeText("test")
     }
-</table>
-<p>@lobbyData.IsBuzzed</p>
-<p>@lobbyData.BuzzedUserID</p>
+</script>
+
 
 @code {
     [Parameter]
     public string? lobbyId { get; set; }
     private int scorePoints = 5;
-    public bool wasUploaded = false;
-    private int textClientID;
-    private string clientText = "";
+    private int failPoints = 1;
+    private string textForPlayers = "";
+    private string buzzedUserName = "";
     private List<BuzzerLobby> buzzerLobbies = new List<BuzzerLobby>();
     private Dictionary<int, User> UserDictionary = new Dictionary<int, User>();
     private HubConnection? hubConnection;
     private Lobby lobbyData;
+    private string buzzerText => lobbyData.IsBuzzed? "Reset Buzzer" : "Lock Buzzer";
 
     protected override async Task OnInitializedAsync()
     {
@@ -74,6 +100,7 @@
         {
             lobbyData.IsBuzzed = buzzState;
             lobbyData.BuzzedUserID = userId;
+            buzzedUserName = username;
             InvokeAsync(StateHasChanged);
         });
         hubConnection.On<int, string, string>("ReceiveTextChange", (userId, username, text) =>
@@ -90,6 +117,16 @@
         {
             buzzerLobbies.Add(BuzzerService.GetBuzzerLobby(lobbyData.LobbyCode, userId));
             UserDictionary.Add(userId, UserService.GetUser(userId));
+            InvokeAsync(StateHasChanged);
+        });
+        hubConnection.On<int>("ReceiveLeaveLobby", (userId) =>
+        {
+            JS.InvokeVoidAsync("UserLeave", userId);
+            InvokeAsync(StateHasChanged);
+        });
+        hubConnection.On<int>("ReceiveReJoinLobby", (userId) =>
+        {
+            JS.InvokeVoidAsync("UserRejoin", userId);
             InvokeAsync(StateHasChanged);
         });
     }
@@ -120,6 +157,17 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    private async Task UnlockSingleText(BuzzerLobby buzzerLobby)
+    {
+        buzzerLobby.TextLocked = false;
+        BuzzerService.ChangeTextLockedStateForBuzzerLobby(lobbyId, buzzerLobby.TextLocked, buzzerLobby.UserID);
+        if (hubConnection is not null)
+        {
+            await hubConnection.SendAsync("ResetSingleTextLock", lobbyId, buzzerLobby.UserID);
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
     private async Task UserPointsChanged(ChangeEventArgs changeEventArgs, BuzzerLobby buzzerLobby)
     {
         buzzerLobby.Points = Convert.ToInt32(changeEventArgs.Value);
@@ -142,14 +190,14 @@
             buzzerLobby.Points = newPoints;
             await ChangePoints(buzzerLobby);
         }
-        await ResetBuzzer();
+        await ChangeBuzzerState();
     }
 
     private async Task UserFailed()
     {
         foreach (BuzzerLobby buzzerLobby in buzzerLobbies)
         {
-            int newPoints = buzzerLobby.Points + 1;
+            int newPoints = buzzerLobby.Points + failPoints;
             if (buzzerLobby.UserID == lobbyData.BuzzedUserID)
             {
                 newPoints = buzzerLobby.Points;
@@ -157,7 +205,7 @@
             buzzerLobby.Points = newPoints;
             await ChangePoints(buzzerLobby);
         }
-        await ResetBuzzer();
+        await ChangeBuzzerState();
     }
 
     private async Task ChangePoints(BuzzerLobby buzzerLobby)
@@ -169,14 +217,15 @@
         }
     }
 
-    private async Task ResetBuzzer()
+    private async Task ChangeBuzzerState()
     {
-        lobbyData.IsBuzzed = false;
+        lobbyData.IsBuzzed = !lobbyData.IsBuzzed;
         lobbyData.BuzzedUserID = 0;
+        buzzedUserName = "";
         BuzzerService.ChangeBuzzedStateForLobby(lobbyId, lobbyData.IsBuzzed, lobbyData.BuzzedUserID);
         if (hubConnection is not null)
         {
-            await hubConnection.SendAsync("ChangeBuzz", lobbyId, 0, "Host", false);
+            await hubConnection.SendAsync("ChangeBuzz", lobbyId, 0, "", lobbyData.IsBuzzed);
         }
         await InvokeAsync(StateHasChanged);
     }
@@ -186,10 +235,32 @@
         foreach(BuzzerLobby buzzerLobby in buzzerLobbies)
         {
             buzzerLobby.TextLocked = false;
+            BuzzerService.ChangeTextLockedStateForBuzzerLobby(lobbyId, buzzerLobby.TextLocked, buzzerLobby.UserID);
         }
         if (hubConnection is not null)
         {
             await hubConnection.SendAsync("ResetTextLock", lobbyId);
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task TextForPlayersChange()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.SendAsync("TextForPlayersChange", lobbyId, textForPlayers);
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task KickPlayer(BuzzerLobby buzzerLobby)
+    {
+        BuzzerService.DeleteBuzzerLobby(buzzerLobby.LobbyCode, buzzerLobby.UserID);
+        buzzerLobbies.RemoveAll(b => b.UserID == buzzerLobby.UserID);
+        UserDictionary.Remove(buzzerLobby.UserID);
+        if (hubConnection is not null)
+        {
+            await hubConnection.SendAsync("KickPlayer", lobbyId, buzzerLobby.UserID);
         }
         await InvokeAsync(StateHasChanged);
     }

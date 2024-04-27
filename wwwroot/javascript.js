@@ -36,3 +36,13 @@ function GetFromLocalStorage(key)
     }
     return null;
 }
+
+function UserLeave(userID) {
+    var userDataElement = document.getElementById("user-data-" + userID);
+    userDataElement.style.opacity = "0.2";
+}
+
+function UserRejoin(userID) {
+    var userDataElement = document.getElementById("user-data-" + userID);
+    userDataElement.style.opacity = "1.0";
+}

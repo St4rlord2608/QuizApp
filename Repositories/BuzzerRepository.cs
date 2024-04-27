@@ -104,6 +104,27 @@ namespace QuizApp.Repositories
             }
         }
 
+        public void DeleteBuzzerLobby(string lobbyCode, int userID)
+        {
+            try
+            {
+                using var conn = new SqlConnection(DBConnectionString);
+                {
+                    conn.Open();
+                    var command = new SqlCommand("DELETE FROM BuzzerLobby WHERE LobbyCode = @LobbyCode AND UserID = @UserID", conn);
+                    command.Parameters.AddWithValue("@LobbyCode", lobbyCode);
+                    command.Parameters.AddWithValue("@UserID", userID);
+                    command.ExecuteNonQuery();
+                    conn.Close();
+                }
+
+            }
+            catch (Exception ex)
+            {
+
+            }
+        }
+
         public IEnumerable<BuzzerLobby> GetAllBuzzerLobbiesForLobby(string lobbyCode)
         {
             List<BuzzerLobby> buzzerLobbies = new List<BuzzerLobby>();
@@ -122,6 +143,7 @@ namespace QuizApp.Repositories
                             buzzerLobby.LobbyCode = reader.GetValue(reader.GetOrdinal("LobbyCode")).ToString();
                             buzzerLobby.UserID = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("UserID")));
                             buzzerLobby.Points = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("Points")));
+                            buzzerLobby.TextLocked = (bool)(reader.GetValue(reader.GetOrdinal("TextLocked")));
                             buzzerLobbies.Add(buzzerLobby);
 
                         }
@@ -201,6 +223,28 @@ namespace QuizApp.Repositories
             }
         }
 
+        public void ChangeTextLockedStateForBuzzerLobby(string lobbyCode, bool textLocked, int userID)
+        {
+            try
+            {
+                using var conn = new SqlConnection(DBConnectionString);
+                {
+                    conn.Open();
+                    var command = new SqlCommand("UPDATE BuzzerLobby SET TextLocked = @TextLocked WHERE LobbyCode = @LobbyCode AND UserID = @TextLockedUserID", conn);
+                    command.Parameters.AddWithValue("@LobbyCode", lobbyCode);
+                    command.Parameters.AddWithValue("@TextLocked", textLocked);
+                    command.Parameters.AddWithValue("@TextLockedUserID", userID);
+                    command.ExecuteNonQuery();
+                    conn.Close();
+                }
+
+            }
+            catch (Exception ex)
+            {
+
+            }
+        }
+
         public void AddBuzzerLobby(string lobbyCode, int userID, int points)
         {
             try
@@ -208,7 +252,7 @@ namespace QuizApp.Repositories
                 using var conn = new SqlConnection(DBConnectionString);
                 {
                     conn.Open();
-                    var command = new SqlCommand("INSERT INTO BuzzerLobby VALUES(@LobbyCode, @UserID, @Points)", conn);
+                    var command = new SqlCommand("INSERT INTO BuzzerLobby(LobbyCode, UserID, Points) VALUES(@LobbyCode, @UserID, @Points)", conn);
                     command.Parameters.AddWithValue("@LobbyCode", lobbyCode);
                     command.Parameters.AddWithValue("@UserID", userID);
                     command.Parameters.AddWithValue("@Points", points);
@@ -241,7 +285,7 @@ namespace QuizApp.Repositories
                             buzzerLobby.LobbyCode = reader.GetValue(reader.GetOrdinal("LobbyCode")).ToString();
                             buzzerLobby.UserID = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("UserID")));
                             buzzerLobby.Points = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("Points")));
-
+                            buzzerLobby.TextLocked = (bool)(reader.GetValue(reader.GetOrdinal("TextLocked")));
                         }
                         conn.Close();
                         return buzzerLobby;
