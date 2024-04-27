@@ -1,0 +1,23 @@
+{
+  "dependencies": {
+    "secrets1": {
+      "type": "secrets.user"
+    },
+    "mssql1": {
+      "serviceConnectorResourceId": "/subscriptions/[parameters('subscriptionId')]/resourceGroups/[parameters('resourceGroupName')]/providers/Microsoft.ServiceLinker/locations/germanywestcentral/connectors/ConnectionStringsLocal_SQL_CONNECTIONSTR_9AC5D72E60",
+      "secretStore": "LocalSecretsFile",
+      "resourceId": "/subscriptions/[parameters('subscriptionId')]/resourceGroups/[parameters('resourceGroupName')]/providers/Microsoft.Sql/servers/web-app/databases/WebAppDB",
+      "type": "mssql.azure",
+      "connectionId": "ConnectionStrings:Local_SQL_CONNECTIONSTRING",
+      "dynamicId": null
+    },
+    "mssql2": {
+      "serviceConnectorResourceId": "/subscriptions/[parameters('subscriptionId')]/resourceGroups/[parameters('resourceGroupName')]/providers/Microsoft.ServiceLinker/locations/germanywestcentral/connectors/Azure_ConnectionString_54A74F6218",
+      "secretStore": "LocalSecretsFile",
+      "resourceId": "/subscriptions/[parameters('subscriptionId')]/resourceGroups/[parameters('resourceGroupName')]/providers/Microsoft.Sql/servers/web-app/databases/WebAppDB",
+      "type": "mssql.azure",
+      "connectionId": "Azure_ConnectionString",
+      "dynamicId": null
+    }
+  }
+}

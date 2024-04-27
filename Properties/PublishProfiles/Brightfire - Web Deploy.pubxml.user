@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Diese Datei wird vom Veröffentlichungs-/Paketierungsprozess Ihres Webprojekts verwendet. Sie können das Verhalten dieses Prozesses anpassen,
+indem Sie diese MSBuild-Datei bearbeiten. Weitere Informationen hierzu finden Sie unter https://go.microsoft.com/fwlink/?LinkID=208121. 
+-->
+<Project>
+  <PropertyGroup>
+    <TimeStampOfAssociatedLegacyPublishXmlFile />
+    <EncryptedPassword>AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAAlIz/0mdm4Eque52oZZY6dwAAAAACAAAAAAAQZgAAAAEAACAAAACI7wp+pBYB12LW8WTb9TAOxcIEK0Vf6dnC/APBUQ5BGAAAAAAOgAAAAAIAACAAAAA3TCqFUkN2aedhgAhRaAn36Swyz8aHGFFz7UYCkL9r7IAAAAAKooDfnpsTeK/wyMt+1qhrNribb1DdySraRy5sDH7fSy5hapHODeUrYZ/HN8zcBcFx8VCWBKJVdjuwVt72WwfnlsbfTEOc6dDbyRi5vcTTytli3BZ6vowVvtj3GZNQsaMAA+Gd/odBnBZRM1+zBTgGp/na+wE9F3SaX5mYcRUcvkAAAADe9xGEvsWhOoj2bbNT9jPUF8pOWm+c5tv/g854NDRzF9e+sIWNf6N6OF5lsZECiaN15ejpmdi5n3aLL33okqDN</EncryptedPassword>
+    <History>True|2024-04-27T20:02:13.3901072Z;True|2024-04-27T21:51:31.1702722+02:00;True|2024-04-27T21:29:15.2076707+02:00;True|2024-04-27T20:07:57.4581792+02:00;False|2024-04-27T20:07:35.6633982+02:00;True|2024-04-27T20:06:37.6937510+02:00;True|2024-04-27T20:00:03.5654615+02:00;</History>
+    <LastFailureDetails />
+  </PropertyGroup>
+  <ItemGroup>
+    <DestinationConnectionStrings Include="AZURE_SQL_CONNECTIONSTRING">
+      <Value>Data Source=tcp:web-app.database.windows.net,1433%3bInitial Catalog=WebAppDB%3bUser Id=CloudSAb56f1b6d%40web-app%3bPassword=Hardcase.2608.7985</Value>
+    </DestinationConnectionStrings>
+  </ItemGroup>
+</Project>
