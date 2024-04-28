@@ -46,3 +46,8 @@ function UserRejoin(userID) {
     var userDataElement = document.getElementById("user-data-" + userID);
     userDataElement.style.opacity = "1.0";
 }
+
+function InitTooltips() {
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+        const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    }

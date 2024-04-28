@@ -10,38 +10,52 @@
 @inject UserService UserService
 @implements IAsyncDisposable
 
-@if(buzzerLobbies.Count > 0)
-{
-    <div>
-        <h3>BuzzerPlay</h3>
-        <label>Input:</label>
-        <textarea disabled="@buzzerLobby.TextLocked" @bind="text" @bind:event="oninput" @bind:after="InputChange" />
-        <button disabled="@buzzerLobby.TextLocked" @onclick="LockText">Lock answer</button>
-        <button id="buzzer" @onclick="Buzz" disabled="@lobbyData.IsBuzzed">Buzzer</button>
-        <p>Text from Host:</p>
-        <p>@textFromHost</p>
-        <p>Buzzed user: @buzzedUserName</p>
-        <table>
-            <tr>
-                <th>Username</th>
-                <th>Points</th>
-            </tr>
-            @foreach (BuzzerLobby buzzerLobby in buzzerLobbies)
-            {
-                <tr id="user-data-@buzzerLobby.UserID">
-                    <th>@UserDictionary[buzzerLobby.UserID].UserName</th>
-                    <th>@buzzerLobby.Points</th>
-                </tr>
+<div class="container-sm buzzer-play-container">
+    @if(buzzerLobbies.Count > 0)
+    {
+        <div>
+            <h1 class="title-centered">BuzzerPlay</h1>
+            <div class="input-group buzzer-host-text">
+              <span class="input-group-text">Text from Host</span>
+              <textarea value="@textFromHost" class="form-control" aria-label="Text from Host" readonly></textarea>
+            </div>
+             <div class="buzzer-play-buzzer-container">
+                <button id="buzzer" @onclick="Buzz" disabled="@lobbyData.IsBuzzed" class="btn btn-success buzzer-play-buzzer">Buzzer</button>
+                <div class="buzzer-play-buzzer-text">Buzzed user: @buzzedUserName</div>
+             </div>
+             <div class="buzzer-play-input-container">
+                <div class="input-group buzzer-play-input">
+                  <span class="input-group-text">Input</span>
+                  <textarea class="form-control" aria-label="Input" disabled="@buzzerLobby.TextLocked" @bind="text" @bind:event="oninput" @bind:after="InputChange"></textarea>
+                </div>
+                <button disabled="@buzzerLobby.TextLocked" @onclick="LockText" class="btn btn-primary">Lock answer</button>
+             </div>
+            <div class="buzzer-player-card-container">
+                @foreach (BuzzerLobby buzzerLobby in buzzerLobbies)
+                 {
+                <div class="card buzzer-player-card" id="user-data-@buzzerLobby.UserID">
+                  <div class="card-body">
+                    <h5 class="card-title buzzer-player-card-username">@UserDictionary[buzzerLobby.UserID].UserName</h5>
+                    <div class="card-subtitle mb-2 text-body-secondary">
+                        <div class="input-group mb-3">
+                          <span class="input-group-text" id="basic-addon1">Points</span>
+                          <input type="number" class="form-control" value="@buzzerLobby.Points" readonly>
+                        </div>
+                        </div>
+                  </div>
+                </div>
             }
-        </table>
-    </div>
-}
-else
-{
-    <div>
-        <p>This Lobby doesnt exist</p>
-    </div>
-}
+            </div>
+        </div>
+    }
+    else
+    {
+        <div>
+            <p>This Lobby doesnt exist</p>
+        </div>
+    }
+</div>
+
 
 
 <script>
