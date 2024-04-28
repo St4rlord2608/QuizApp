@@ -3,14 +3,14 @@
     "secrets1": {
       "type": "secrets"
     },
-    "mssql1": {
-      "type": "mssql",
-      "connectionId": "ConnectionStrings:Local_SQL_CONNECTIONSTRING",
-      "dynamicId": null
-    },
     "mssql2": {
       "type": "mssql",
       "connectionId": "Azure_ConnectionString",
+      "dynamicId": null
+    },
+    "mssql1": {
+      "type": "mssql",
+      "connectionId": "ConnectionStrings:Private_SQL_CONNECTIONSTRING",
       "dynamicId": null
     }
   }
