@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 @using Microsoft.AspNetCore.SignalR.Client
 @using Microsoft.IdentityModel.Tokens
+@using QuizApp.Components.Icons
 @using QuizApp.Services
 @using QuizApp.Models
 @inject NavigationManager Navigation
@@ -9,57 +10,112 @@
 @inject UserService UserService
 @inject IJSRuntime JS
 @implements IAsyncDisposable
-
-@if(lobbyData.LobbyCode != null)
-{
-    <button onclick="copyToClipboard()">Copy Lobby code</button>
-    <h3>BuzzerHost</h3>
-    <label>Points for correct answer:</label>
-    <input @bind="scorePoints" />
-    <label>Points for incorrect answer:</label>
-    <input @bind="failPoints" />
-    <label>Text for players:</label>
-    <input @bind="textForPlayers" @bind:after="TextForPlayersChange" />
-    <button @onclick="UserScored" disabled="@(!lobbyData.IsBuzzed)">Score</button>
-    <button @onclick="UserFailed" disabled="@(!lobbyData.IsBuzzed)">Fail</button>
-    <button @onclick="ChangeBuzzerState">@buzzerText</button>
-    <button @onclick="UnlockText">Unlock all texts</button>
-    <p>Buzzed user: @buzzedUserName</p>
-    <table>
-        <tr>
-            <th>Kick</th>
-            <th>Username</th>
-            <th>Points</th>
-            <th>Answer</th>
-            <th>AnswerLocked</th>
-            <th>AnswerCorrect</th>
-            <th>Unlock Text</th>
-        </tr>
-        @foreach (BuzzerLobby buzzerLobby in buzzerLobbies)
-        {
-            <tr id="user-data-@buzzerLobby.UserID">
-                <th><button onclick="@(() => KickPlayer(buzzerLobby))">Kick</button></th>
-                <th>@UserDictionary[buzzerLobby.UserID].UserName</th>
-                <th><input type="number" value="@buzzerLobby.Points" onchange="@((ChangeEventArgs e) => UserPointsChanged(e, buzzerLobby))" /></th>
-                <th>@buzzerLobby.Text</th>
-                <th>@buzzerLobby.TextLocked</th>
-                <th><button disabled="@(!buzzerLobby.TextLocked)" onclick="@(() => UserTextIsCorrect(buzzerLobby))">Give Points</button></th>
-                <th><button disabled="@(!buzzerLobby.TextLocked)" onclick="@(() => UnlockSingleText(buzzerLobby))">Unlock Text</button></th>
-            </tr>
-        }
-    </table>
-    <p>@lobbyData.IsBuzzed</p>
-    <p>@lobbyData.BuzzedUserID</p>
-}
-else
-{
-    <div>lobby doesnt exist</div>
-}
-
-<script>
-    function copyToClipboard() {
-        navigator.clipboard.writeText("test")
+<div class="container buzzer-host-container">
+    @if (lobbyData.LobbyCode != null)
+    {
+        
+        <h1 class="title-centered">Host</h1>
+        <div class="buzzer-lobby-code-container">
+            <input id="buzzer-lobby-code" class="form-control buzzer-lobby-code" type="text" value="@lobbyId" aria-label="Lobby_code" readonly>
+            <button type="button" class="btn btn-primary" onclick="copyToClipboard()" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Copy to clipboard">
+                <ClipboardFill Height="25" Width="25" />
+            </button>
+            <span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Settings">
+                <button type="button" class="btn settings-button" data-bs-toggle="modal" data-bs-target="#settings-modal" >
+                <GearFill Width="30" Height="30" />
+            </button>
+            </span>
+        </div>
+        <div class="input-group buzzer-host-text-container">
+          <span class="input-group-text">Text for players</span>
+          <textarea @bind="textForPlayers" @bind:after="TextForPlayersChange" class="form-control" aria-label="Text for players"></textarea>
+        </div>
+        <div class="card buzzer-host-buzzer-container">
+          <div class="card-body">
+            <h5 class="card-title">Buzzer</h5>
+            <h6 class="card-subtitle mb-2 text-body-secondary">Buzzered User: @buzzedUserName</h6>
+            <div class="card-text">
+                
+                <div class="btn-group" role="group" aria-label="Basic mixed styles example">
+                  <button @onclick="UserScored" disabled="@(!lobbyData.IsBuzzed)" class="btn btn-success">Score</button>
+                  <button @onclick="UserFailed" disabled="@(!lobbyData.IsBuzzed)" class="btn btn-danger">Fail</button>
+                  <button @onclick="ChangeBuzzerState" class="btn btn-primary">@buzzerText</button>
+                </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="buzzer-host-unlock-all-text">   
+            <button @onclick="UnlockText" class="btn btn-warning">Unlock all texts</button>
+        </div>
+        <div class="buzzer-player-card-container">
+            @foreach (BuzzerLobby buzzerLobby in buzzerLobbies)
+            {
+                <div class="card buzzer-player-card" id="user-data-@buzzerLobby.UserID">
+                  <div class="card-body">
+                      <button onclick="@(() => KickPlayer(buzzerLobby))" class="btn-close buzzer-host-kick-player-button" aria-label="close"/>
+                    <h5 class="card-title buzzer-player-card-username">@UserDictionary[buzzerLobby.UserID].UserName</h5>
+                    <div class="card-subtitle mb-2 text-body-secondary">
+                        <div class="input-group mb-3">
+                          <span class="input-group-text" id="basic-addon1">Points</span>
+                          <input type="number" class="form-control" value="@buzzerLobby.Points" onchange="@((ChangeEventArgs e) => UserPointsChanged(e, buzzerLobby))">
+                        </div>
+                        </div>
+                    <div class="card-text">
+                       <div class="input-group">
+                            <textarea value="@buzzerLobby.Text" class="form-control" aria-label="Text from player" readonly/>
+                       </div>
+                    </div>
+                  </div>
+                  <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                          <div class="input-group buzzer-host-player-card-checkbox-container">
+                              <span class="input-group-text" id="basic-addon1">Text Locked</span>
+                              <div class="input-group-text">
+                                  <input type="checkbox" class="form-check-input" disabled checked="@buzzerLobby.TextLocked"/>
+                              </div>
+                           </div>
+                      </li>
+                    <li class="list-group-item"><button class="btn btn-success" disabled="@(!buzzerLobby.TextLocked)" onclick="@(() => UserTextIsCorrect(buzzerLobby))">Give Points</button></li>
+                    <li class="list-group-item"><button class="btn btn-warning" disabled="@(!buzzerLobby.TextLocked)" onclick="@(() => UnlockSingleText(buzzerLobby))">Unlock Text</button></li>
+                  </ul>
+                </div>
+            }
+        </div>
+        <div class="modal fade" id="settings-modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h1 class="modal-title fs-5" id="settings-modal-header">Settings</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                 <div class="input-group correct-answer-container">
+                    <span class="input-group-text">Points for correct answer</span>
+                    <input type="number" class="form-control" @bind="scorePoints" />
+                </div>
+                <div class="input-group incorrect-answer-container">
+                    <span class="input-group-text">Points for incorrect answer</span>
+                    <input type="number" class="form-control" @bind="failPoints" />
+                </div>
+                
+              </div>
+            </div>
+          </div>
+        </div>
     }
+    else
+    {
+        <div>lobby doesnt exist</div>
+    }
+</div>
+<script>
+    
+    function copyToClipboard() 
+    {
+        navigator.clipboard.writeText(document.getElementById("buzzer-lobby-code").value)
+    }
+    InitTooltips();
 </script>
 
 

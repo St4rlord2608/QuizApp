@@ -1,12 +1,19 @@
 ﻿@using QuizApp.Models
 @using QuizApp.Services
+@using QuizApp.Components.Icons
 @rendermode InteractiveServer
 @inject NavigationManager Navigation
 @inject UserService UserService
 @inject IJSRuntime JS
 
-<div class="top-row px-4">
-    <input @bind="username" @bind:after="OnUsernameChange" class="username-input" />
+<div class="header">
+    <div class="username-container input-group">
+        <span class="input-group-text">Username: </span>
+        <input @bind="username" @bind:after="OnUsernameChange" class="username-input form-control" />
+    </div>
+    <div class="home-icon-container">
+        <a class="home-icon" href="/"><HouseFill Width="30" Height="30" /></a>
+    </div>
 </div>
 
 @code {

@@ -6,19 +6,34 @@
 @using QuizApp.Services
 @inject NavigationManager Navigation
 @inject BuzzerLobbyManagementService BuzzerService
-<h3>Buzzer</h3>
-<button @onclick="CreateLobbyCode">Host Lobby</button>
-<label>Lobby Code:</label>
-<input @bind="joinLobbyCode"/>
-<button @onclick="JoinLobby" >Join Lobby</button>
-@if (hostingFailed)
-{
-    <p>Hosting Failed. Please try again later</p>
-}
-@if (lobbyDoesntExist)
-{
-    <p>The lobby @joinLobbyCode doesnt exist</p>
-}
+
+<div class="container-sm buzzer-index-container">
+    <h1 class="title-centered">Buzzer</h1>
+    @if (hostingFailed)
+    {
+        <div class="alert alert-danger" role="alert">
+            <strong>Hosting failed!</strong> Try again later.
+        </div>
+    }
+    
+    <button @onclick="CreateLobbyCode" class="btn btn-secondary buzzer-host-button">Host Lobby</button>
+    <div class="card buzzer-join-container">
+        <div class="card-body">
+            <h5 class="card-title">Join Lobby</h5>
+            <div class="input-group">
+                <input type="text" class="form-control" placeholder="Lobby code" aria-label="Lobby code" @bind="joinLobbyCode" @bind:event="oninput" @bind:after="OnLobbyCodeInput">
+                <button @onclick="JoinLobby" class="btn btn-success">Join Lobby</button>
+            </div>
+        </div>
+    </div>
+    @if (lobbyDoesntExist)
+    {
+        <div class="alert alert-danger buzzer-lobby-alert" role="alert">
+            Lobby code <strong>@joinLobbyCode</strong> does not exist!
+        </div>
+    }
+</div>
+
 
 @code {
     private string hostUrl = "/buzzer/host/";
@@ -30,7 +45,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        
+
     }
 
     private void CreateLobbyCode()
@@ -67,5 +82,11 @@
             lobbyDoesntExist = false;
             Navigation.NavigateTo(playUrl + joinLobbyCode);
         }
+    }
+
+    private void OnLobbyCodeInput()
+    {
+        hostingFailed = false;
+        lobbyDoesntExist = false;
     }
 }

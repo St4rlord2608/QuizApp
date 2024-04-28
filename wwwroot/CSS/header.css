@@ -1,0 +1,41 @@
+﻿body {
+}
+.header {
+    height: 50px;
+    background: lightgray;
+    box-shadow: 5px 7px 15px -5px rgba(0,0,0,0.69);
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.header .username-container{
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+    height: 100%;
+    align-content: center;
+}
+
+.header .username-container .username-input{
+    width: fit-content;
+    display: inline;
+}
+
+.header .home-icon{
+    color: black
+}
+
+.header .home-icon:hover {
+    color: grey;
+    cursor: pointer;
+}
+
+.header .home-icon-container{
+    position: absolute;
+    right: 30px;
+}
+
+.header .home-icon-container:hover{
+    
+}

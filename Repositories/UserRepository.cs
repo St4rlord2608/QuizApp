@@ -10,8 +10,7 @@ namespace QuizApp.Repositories
         {
             WebHostEnvironment = webHostEnvironment;
             _configuration = config;
-            //DBConnectionString = _configuration.GetConnectionString("Local_SQL_CONNECTIONSTRING")!;
-            DBConnectionString = _configuration.GetConnectionString("AZURE_SQL_CONNECTIONSTRING")!;
+            DBConnectionString = _configuration.GetConnectionString("SQL_CONNECTIONSTRING")!;
         }
 
         public IWebHostEnvironment WebHostEnvironment { get; }
