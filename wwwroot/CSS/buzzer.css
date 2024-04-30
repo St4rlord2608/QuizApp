@@ -49,7 +49,14 @@
     margin-top: 40px;
 }
 
-.buzzer-host-container .buzzer-host-buzzer-container{
+.buzzer-host-container .buzzer-host-number-guess-container {
+    width: 50%;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 40px;
+}
+
+.buzzer-host-container .buzzer-host-buzzer-container {
     margin-left: auto;
     margin-right: auto;
     width: 500px;

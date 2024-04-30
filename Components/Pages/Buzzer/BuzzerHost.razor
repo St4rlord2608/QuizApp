@@ -30,6 +30,10 @@
           <span class="input-group-text">Text for players</span>
           <textarea @bind="textForPlayers" @bind:after="TextForPlayersChange" class="form-control" aria-label="Text for players"></textarea>
         </div>
+        <div class="input-group buzzer-host-number-guess-container">
+            <span class="input-group-text">Searched Number</span>
+            <input @bind="searchedNumber" @bind:after="SearchedNumberChange" class="form-control" aria-label="Searched Number"/>
+        </div>
         <div class="card buzzer-host-buzzer-container">
           <div class="card-body">
             <h5 class="card-title">Buzzer</h5>
@@ -37,8 +41,8 @@
             <div class="card-text">
                 
                 <div class="btn-group" role="group" aria-label="Basic mixed styles example">
-                  <button @onclick="UserScored" disabled="@(!lobbyData.IsBuzzed)" class="btn btn-success">Score</button>
-                  <button @onclick="UserFailed" disabled="@(!lobbyData.IsBuzzed)" class="btn btn-danger">Fail</button>
+                  <button @onclick="UserScored" disabled="@(!lobbyData.IsBuzzed || lobbyData.BuzzedUserID == 0)" class="btn btn-success">Score</button>
+                        <button @onclick="UserFailed" disabled="@(!lobbyData.IsBuzzed || lobbyData.BuzzedUserID == 0)" class="btn btn-danger">Fail</button>
                   <button @onclick="ChangeBuzzerState" class="btn btn-primary">@buzzerText</button>
                 </div>
             </div>
@@ -125,6 +129,7 @@
     private int scorePoints = 5;
     private int failPoints = 1;
     private string textForPlayers = "";
+    private string searchedNumber = "";
     private string buzzedUserName = "";
     private List<BuzzerLobby> buzzerLobbies = new List<BuzzerLobby>();
     private Dictionary<int, User> UserDictionary = new Dictionary<int, User>();
@@ -157,11 +162,19 @@
             lobbyData.IsBuzzed = buzzState;
             lobbyData.BuzzedUserID = userId;
             buzzedUserName = username;
+            if (buzzState && userId != 0)
+            {
+                JS.InvokeVoidAsync("PlayBuzzSound");
+            }
             InvokeAsync(StateHasChanged);
         });
         hubConnection.On<int, string, string>("ReceiveTextChange", (userId, username, text) =>
         {
             buzzerLobbies.First(buzzerLobby => buzzerLobby.UserID == userId).Text = text;
+            if (searchedNumber != "")
+            {
+                HandleNearestPlayer();
+            }
             InvokeAsync(StateHasChanged);
         });
         hubConnection.On<int>("ReceiveTextLock", (userId) =>
@@ -205,11 +218,7 @@
     private async Task UserTextIsCorrect(BuzzerLobby buzzerLobby)
     {
         buzzerLobby.Points += scorePoints;
-        if(hubConnection is not null)
-        {
-            await hubConnection.SendAsync("ChangePoints", lobbyId, buzzerLobby.UserID, buzzerLobby.Points);
-        }
-        BuzzerService.UpdateBuzzerLobbyPoints(lobbyId, buzzerLobby.UserID, buzzerLobby.Points);
+        await ChangePoints(buzzerLobby, false);
         await InvokeAsync(StateHasChanged);
     }
 
@@ -227,11 +236,7 @@
     private async Task UserPointsChanged(ChangeEventArgs changeEventArgs, BuzzerLobby buzzerLobby)
     {
         buzzerLobby.Points = Convert.ToInt32(changeEventArgs.Value);
-        if (hubConnection is not null)
-        {
-            await hubConnection.SendAsync("ChangePoints", lobbyId, buzzerLobby.UserID, buzzerLobby.Points);
-        }
-        BuzzerService.UpdateBuzzerLobbyPoints(lobbyId, buzzerLobby.UserID, buzzerLobby.Points);
+        await ChangePoints(buzzerLobby, false);
     }
 
     private async Task UserScored()
@@ -244,7 +249,8 @@
                 newPoints = buzzerLobby.Points + scorePoints;
             }
             buzzerLobby.Points = newPoints;
-            await ChangePoints(buzzerLobby);
+            await JS.InvokeVoidAsync("PlayCorrectSound");
+            await ChangePoints(buzzerLobby, true, true);
         }
         await ChangeBuzzerState();
     }
@@ -259,17 +265,18 @@
                 newPoints = buzzerLobby.Points;
             }
             buzzerLobby.Points = newPoints;
-            await ChangePoints(buzzerLobby);
+            await JS.InvokeVoidAsync("PlayWrongSound");
+            await ChangePoints(buzzerLobby, true);
         }
         await ChangeBuzzerState();
     }
 
-    private async Task ChangePoints(BuzzerLobby buzzerLobby)
+    private async Task ChangePoints(BuzzerLobby buzzerLobby, bool wasBuzzed, bool correct = false)
     {
         BuzzerService.UpdateBuzzerLobbyPoints(lobbyId, buzzerLobby.UserID, buzzerLobby.Points);
         if (hubConnection is not null)
         {
-            await hubConnection.SendAsync("ChangePoints", lobbyId, buzzerLobby.UserID, buzzerLobby.Points);
+            await hubConnection.SendAsync("ChangePoints", lobbyId, buzzerLobby.UserID, buzzerLobby.Points, wasBuzzed, correct);
         }
     }
 
@@ -305,6 +312,59 @@
         if (hubConnection is not null)
         {
             await hubConnection.SendAsync("TextForPlayersChange", lobbyId, textForPlayers);
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SearchedNumberChange(){
+        await HandleNearestPlayer();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleNearestPlayer(){
+        BuzzerLobby currentNearestPlayer = new BuzzerLobby();
+        string currentNearestPlayerNumberString = "";
+        List<BuzzerLobby> nearestPlayerList = new List<BuzzerLobby>();
+        string concatSearchedNumberString = string.Concat(searchedNumber.Where(c => Char.IsDigit(c) || (int)c == 45));
+        foreach(BuzzerLobby buzzerLobby in buzzerLobbies){
+            await JS.InvokeVoidAsync("HandleNearestPlayerVisual", buzzerLobby.UserID, false);
+            string numberString = string.Concat(buzzerLobby.Text.Where(c => (Char.IsDigit(c) || (int)c == 45) ));
+            string concatCurrentNearestPlayerNumberString = string.Concat(currentNearestPlayerNumberString.Where(c => Char.IsDigit(c) || (int)c == 45));
+            long searchedNumberInt = 0;
+            long currentNearestPlayerNumberInt = 0;
+            long numberInt = 0;
+            try{
+                searchedNumberInt = Convert.ToInt64(concatSearchedNumberString);
+                if (concatCurrentNearestPlayerNumberString != "") currentNearestPlayerNumberInt = Convert.ToInt64(concatCurrentNearestPlayerNumberString);
+                numberInt = Convert.ToInt64(numberString);
+            }catch{
+                continue;
+            }
+            long currentNearestDifference = Math.Abs(searchedNumberInt - currentNearestPlayerNumberInt);
+            long numberDifference = Math.Abs(searchedNumberInt - numberInt);
+            if (numberString == "")
+            {
+                continue;
+            }else if(currentNearestPlayerNumberString == "")
+            {
+                currentNearestPlayer = buzzerLobby;
+                currentNearestPlayerNumberString = numberString;
+                nearestPlayerList = new List<BuzzerLobby> { currentNearestPlayer };
+            }
+            else if (currentNearestDifference == numberDifference)
+            {
+                nearestPlayerList.Add(buzzerLobby);
+            }
+            else if (currentNearestDifference > numberDifference)
+            {
+                currentNearestPlayer = buzzerLobby;
+                currentNearestPlayerNumberString = numberString;
+                nearestPlayerList = new List<BuzzerLobby> { currentNearestPlayer };
+            }
+        }
+        foreach(BuzzerLobby buzzerLobby in nearestPlayerList)
+        {
+            await JS.InvokeVoidAsync("HandleNearestPlayerVisual", buzzerLobby.UserID, true);
         }
         await InvokeAsync(StateHasChanged);
     }

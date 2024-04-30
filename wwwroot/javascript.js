@@ -50,4 +50,38 @@ function UserRejoin(userID) {
 function InitTooltips() {
         const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
         const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+}
+
+function AddOnClickBuzzerEventListener() {
+    var buzzerElement = document.getElementById("buzzer");
+    buzzerElement.addEventListener("click", function (event) {
+        PlayBuzzSound();
+    })
+}
+
+function PlayBuzzSound() {
+    var sound = new Audio('/Media/Audio/buzzer.mp3');
+    sound.volume = 0.2; 
+    sound.play();
+}
+
+function PlayCorrectSound() {
+    var sound = new Audio('/Media/Audio/correct.mp3');
+    sound.volume = 0.2;
+    sound.play();
+}
+
+function PlayWrongSound() {
+    var sound = new Audio('/Media/Audio/wrong.mp3');
+    sound.volume = 0.2;
+    sound.play();
+}
+
+function HandleNearestPlayerVisual(userId, isNearest) {
+    var playerCardElement = document.getElementById('user-data-' + userId);
+    if (isNearest) {
+        playerCardElement.style.border = "3px solid green";
+    } else {
+        playerCardElement.style.border = "1px solid rgba(0,0,0,.125)"
     }
+}

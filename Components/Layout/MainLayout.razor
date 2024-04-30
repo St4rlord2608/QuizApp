@@ -2,6 +2,7 @@
 @using QuizApp.Services
 @inherits LayoutComponentBase
 @inject NavigationManager Navigation
+@inject MainService MainService
 @inject UserService UserService
 @inject IJSRuntime JS
 
@@ -32,13 +33,10 @@
     private User user = new User();
     protected async override Task OnInitializedAsync()
     {
-        /*Uri uri = new Uri(Navigation.Uri);
-        string relativePath = uri.GetComponents(UriComponents.Path, UriFormat.Unescaped);
-        string homeUrl = "";
-        if (!relativePath.Equals(homeUrl, StringComparison.OrdinalIgnoreCase))
-            {
-            Navigation.NavigateTo("/");
-        }*/
+        if (!MainService.DBIsConnected() && Navigation.ToBaseRelativePath(Navigation.Uri) != "dberror")
+        {
+            Navigation.NavigateTo("/dberror");
+        }
     }
 
     

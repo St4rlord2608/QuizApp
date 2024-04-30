@@ -20,6 +20,7 @@ builder.Services.AddSignalR();
 builder.Services.AddControllers();
 builder.Services.AddTransient<BuzzerLobbyManagementService>();
 builder.Services.AddTransient<UserService>();
+builder.Services.AddTransient<MainService>();
 
 var app = builder.Build();
 

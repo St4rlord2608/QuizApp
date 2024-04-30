@@ -76,6 +76,8 @@
             spaceBarPressed = false;
         }
     });
+
+    AddOnClickBuzzerEventListener();
 </script>
 
 @code {
@@ -118,10 +120,25 @@
             lobbyData.IsBuzzed = buzzState;
             lobbyData.BuzzedUserID = userID;
             buzzedUserName = username;
+            if (buzzState && userId != 0)
+            {
+                JS.InvokeVoidAsync("PlayBuzzSound");
+            }
             InvokeAsync(StateHasChanged);
         });
-        hubConnection.On<int, int>("ReceiveChangePoints", (changeUserID, newPoints) =>
+        hubConnection.On<int, int, bool, bool>("ReceiveChangePoints", (changeUserID, newPoints, wasBuzzed, correct) =>
         {
+            if (wasBuzzed)
+            {
+                if (correct)
+                {
+                    JS.InvokeVoidAsync("PlayCorrectSound");
+                }
+                else
+                {
+                    JS.InvokeVoidAsync("PlayWrongSound");
+                }
+            }
             if (userID == changeUserID)
             {
                 points = newPoints;

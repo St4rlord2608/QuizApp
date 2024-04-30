@@ -38,9 +38,9 @@ namespace QuizApp.Hubs
             await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
         }
 
-        public async Task ChangePoints(string groupName, int userID, int points)
+        public async Task ChangePoints(string groupName, int userID, int points, bool wasBuzzed, bool correct)
         {
-            await Clients.Group(groupName).SendAsync("ReceiveChangePoints", userID, points);
+            await Clients.Group(groupName).SendAsync("ReceiveChangePoints", userID, points, wasBuzzed, correct);
         }
 
         public async Task JoinedLobby(string groupName, int userID, string username)
