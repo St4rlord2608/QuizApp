@@ -30,6 +30,10 @@
           <span class="input-group-text">Text for players</span>
           <textarea @bind="textForPlayers" @bind:after="TextForPlayersChange" class="form-control" aria-label="Text for players"></textarea>
         </div>
+        <div class="input-group buzzer-host-number-guess-container">
+            <span class="input-group-text">Searched Number</span>
+            <input @bind="searchedNumber" @bind:after="SearchedNumberChange" class="form-control" aria-label="Searched Number"/>
+        </div>
         <div class="card buzzer-host-buzzer-container">
           <div class="card-body">
             <h5 class="card-title">Buzzer</h5>
@@ -37,8 +41,8 @@
             <div class="card-text">
                 
                 <div class="btn-group" role="group" aria-label="Basic mixed styles example">
-                  <button @onclick="UserScored" disabled="@(!lobbyData.IsBuzzed)" class="btn btn-success">Score</button>
-                  <button @onclick="UserFailed" disabled="@(!lobbyData.IsBuzzed)" class="btn btn-danger">Fail</button>
+                  <button @onclick="UserScored" disabled="@(!lobbyData.IsBuzzed || lobbyData.BuzzedUserID == 0)" class="btn btn-success">Score</button>
+                        <button @onclick="UserFailed" disabled="@(!lobbyData.IsBuzzed || lobbyData.BuzzedUserID == 0)" class="btn btn-danger">Fail</button>
                   <button @onclick="ChangeBuzzerState" class="btn btn-primary">@buzzerText</button>
                 </div>
             </div>
@@ -53,7 +57,8 @@
             {
                 <div class="card buzzer-player-card" id="user-data-@buzzerLobby.UserID">
                   <div class="card-body">
-                      <button onclick="@(() => KickPlayer(buzzerLobby))" class="btn-close buzzer-host-kick-player-button" aria-label="close"/>
+                        <button onclick="@(() => OpenKickModal(buzzerLobby))" class="btn-close buzzer-host-kick-player-button"
+                                aria-label="close" data-bs-toggle="modal" data-bs-target="#kick-modal" />
                     <h5 class="card-title buzzer-player-card-username">@UserDictionary[buzzerLobby.UserID].UserName</h5>
                     <div class="card-subtitle mb-2 text-body-secondary">
                         <div class="input-group mb-3">
@@ -82,6 +87,23 @@
                 </div>
             }
         </div>
+        <div class="modal fade" id="kick-modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h1 class="modal-title fs-5" id="settings-modal-header">Kick Player @playerToKickName</h1>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>The user will be removed completely. So every progress in this lobby will be lost for him</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="@(() => KickPlayer())">Kick</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         <div class="modal fade" id="settings-modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
           <div class="modal-dialog">
             <div class="modal-content">
@@ -125,12 +147,15 @@
     private int scorePoints = 5;
     private int failPoints = 1;
     private string textForPlayers = "";
+    private string searchedNumber = "";
     private string buzzedUserName = "";
     private List<BuzzerLobby> buzzerLobbies = new List<BuzzerLobby>();
     private Dictionary<int, User> UserDictionary = new Dictionary<int, User>();
     private HubConnection? hubConnection;
     private Lobby lobbyData;
     private string buzzerText => lobbyData.IsBuzzed? "Reset Buzzer" : "Lock Buzzer";
+    private BuzzerLobby playerToKick = new BuzzerLobby();
+    private string playerToKickName = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -157,11 +182,19 @@
             lobbyData.IsBuzzed = buzzState;
             lobbyData.BuzzedUserID = userId;
             buzzedUserName = username;
+            if (buzzState && userId != 0)
+            {
+                JS.InvokeVoidAsync("PlayBuzzSound");
+            }
             InvokeAsync(StateHasChanged);
         });
         hubConnection.On<int, string, string>("ReceiveTextChange", (userId, username, text) =>
         {
             buzzerLobbies.First(buzzerLobby => buzzerLobby.UserID == userId).Text = text;
+            if (searchedNumber != "")
+            {
+                HandleNearestPlayer();
+            }
             InvokeAsync(StateHasChanged);
         });
         hubConnection.On<int>("ReceiveTextLock", (userId) =>
@@ -185,6 +218,32 @@
             JS.InvokeVoidAsync("UserRejoin", userId);
             InvokeAsync(StateHasChanged);
         });
+        hubConnection.On<int>("ReceiveAnswerOnAskForPlayers", (userId) =>
+        {
+            JS.InvokeVoidAsync("UserRejoin", userId);
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Task.Delay(500);
+            foreach(BuzzerLobby buzzerLobby in buzzerLobbies)
+            {
+                await JS.InvokeVoidAsync("UserLeave", buzzerLobby.UserID);
+            }
+            await hubConnection.SendAsync("AskForPlayers", lobbyId);
+            AskForPlayer();
+        }
+    }
+
+    private async Task AskForPlayer()
+    {
+        await hubConnection.SendAsync("AskForPlayers", lobbyId);
+        await Task.Delay(60000);
+        AskForPlayer();
     }
 
     private async void RefreshLobbyTime()
@@ -205,11 +264,7 @@
     private async Task UserTextIsCorrect(BuzzerLobby buzzerLobby)
     {
         buzzerLobby.Points += scorePoints;
-        if(hubConnection is not null)
-        {
-            await hubConnection.SendAsync("ChangePoints", lobbyId, buzzerLobby.UserID, buzzerLobby.Points);
-        }
-        BuzzerService.UpdateBuzzerLobbyPoints(lobbyId, buzzerLobby.UserID, buzzerLobby.Points);
+        await ChangePoints(buzzerLobby, false);
         await InvokeAsync(StateHasChanged);
     }
 
@@ -227,11 +282,7 @@
     private async Task UserPointsChanged(ChangeEventArgs changeEventArgs, BuzzerLobby buzzerLobby)
     {
         buzzerLobby.Points = Convert.ToInt32(changeEventArgs.Value);
-        if (hubConnection is not null)
-        {
-            await hubConnection.SendAsync("ChangePoints", lobbyId, buzzerLobby.UserID, buzzerLobby.Points);
-        }
-        BuzzerService.UpdateBuzzerLobbyPoints(lobbyId, buzzerLobby.UserID, buzzerLobby.Points);
+        await ChangePoints(buzzerLobby, false);
     }
 
     private async Task UserScored()
@@ -244,7 +295,8 @@
                 newPoints = buzzerLobby.Points + scorePoints;
             }
             buzzerLobby.Points = newPoints;
-            await ChangePoints(buzzerLobby);
+            await JS.InvokeVoidAsync("PlayCorrectSound");
+            await ChangePoints(buzzerLobby, true, true);
         }
         await ChangeBuzzerState();
     }
@@ -259,17 +311,18 @@
                 newPoints = buzzerLobby.Points;
             }
             buzzerLobby.Points = newPoints;
-            await ChangePoints(buzzerLobby);
+            await JS.InvokeVoidAsync("PlayWrongSound");
+            await ChangePoints(buzzerLobby, true);
         }
         await ChangeBuzzerState();
     }
 
-    private async Task ChangePoints(BuzzerLobby buzzerLobby)
+    private async Task ChangePoints(BuzzerLobby buzzerLobby, bool wasBuzzed, bool correct = false)
     {
         BuzzerService.UpdateBuzzerLobbyPoints(lobbyId, buzzerLobby.UserID, buzzerLobby.Points);
         if (hubConnection is not null)
         {
-            await hubConnection.SendAsync("ChangePoints", lobbyId, buzzerLobby.UserID, buzzerLobby.Points);
+            await hubConnection.SendAsync("ChangePoints", lobbyId, buzzerLobby.UserID, buzzerLobby.Points, wasBuzzed, correct);
         }
     }
 
@@ -309,15 +362,76 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task KickPlayer(BuzzerLobby buzzerLobby)
+    private async Task SearchedNumberChange(){
+        await HandleNearestPlayer();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleNearestPlayer(){
+        BuzzerLobby currentNearestPlayer = new BuzzerLobby();
+        string currentNearestPlayerNumberString = "";
+        List<BuzzerLobby> nearestPlayerList = new List<BuzzerLobby>();
+        string concatSearchedNumberString = string.Concat(searchedNumber.Where(c => Char.IsDigit(c) || (int)c == 45));
+        foreach(BuzzerLobby buzzerLobby in buzzerLobbies){
+            await JS.InvokeVoidAsync("HandleNearestPlayerVisual", buzzerLobby.UserID, false);
+            string numberString = string.Concat(buzzerLobby.Text.Where(c => (Char.IsDigit(c) || (int)c == 45) ));
+            string concatCurrentNearestPlayerNumberString = string.Concat(currentNearestPlayerNumberString.Where(c => Char.IsDigit(c) || (int)c == 45));
+            long searchedNumberInt = 0;
+            long currentNearestPlayerNumberInt = 0;
+            long numberInt = 0;
+            try{
+                searchedNumberInt = Convert.ToInt64(concatSearchedNumberString);
+                if (concatCurrentNearestPlayerNumberString != "") currentNearestPlayerNumberInt = Convert.ToInt64(concatCurrentNearestPlayerNumberString);
+                numberInt = Convert.ToInt64(numberString);
+            }catch{
+                continue;
+            }
+            long currentNearestDifference = Math.Abs(searchedNumberInt - currentNearestPlayerNumberInt);
+            long numberDifference = Math.Abs(searchedNumberInt - numberInt);
+            if (numberString == "")
+            {
+                continue;
+            }else if(currentNearestPlayerNumberString == "")
+            {
+                currentNearestPlayer = buzzerLobby;
+                currentNearestPlayerNumberString = numberString;
+                nearestPlayerList = new List<BuzzerLobby> { currentNearestPlayer };
+            }
+            else if (currentNearestDifference == numberDifference)
+            {
+                nearestPlayerList.Add(buzzerLobby);
+            }
+            else if (currentNearestDifference > numberDifference)
+            {
+                currentNearestPlayer = buzzerLobby;
+                currentNearestPlayerNumberString = numberString;
+                nearestPlayerList = new List<BuzzerLobby> { currentNearestPlayer };
+            }
+        }
+        foreach(BuzzerLobby buzzerLobby in nearestPlayerList)
+        {
+            await JS.InvokeVoidAsync("HandleNearestPlayerVisual", buzzerLobby.UserID, true);
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void OpenKickModal(BuzzerLobby buzzerLobby)
     {
-        BuzzerService.DeleteBuzzerLobby(buzzerLobby.LobbyCode, buzzerLobby.UserID);
-        buzzerLobbies.RemoveAll(b => b.UserID == buzzerLobby.UserID);
-        UserDictionary.Remove(buzzerLobby.UserID);
+        playerToKick = buzzerLobby;
+        playerToKickName = @UserDictionary[playerToKick.UserID].UserName;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task KickPlayer()
+    {
+        BuzzerService.DeleteBuzzerLobby(playerToKick.LobbyCode, playerToKick.UserID);
+        buzzerLobbies.RemoveAll(b => b.UserID == playerToKick.UserID);
+        UserDictionary.Remove(playerToKick.UserID);
         if (hubConnection is not null)
         {
-            await hubConnection.SendAsync("KickPlayer", lobbyId, buzzerLobby.UserID);
+            await hubConnection.SendAsync("KickPlayer", lobbyId, playerToKick.UserID);
         }
+        playerToKick = new BuzzerLobby();
         await InvokeAsync(StateHasChanged);
     }
 }
