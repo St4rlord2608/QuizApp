@@ -137,3 +137,7 @@
     font-size: 30px;
     margin-top: 20px;
 }
+
+.buzzer-player-card-container .buzzer-player-card {
+    /*opacity: 0.4;*/
+}

@@ -39,7 +39,7 @@ function GetFromLocalStorage(key)
 
 function UserLeave(userID) {
     var userDataElement = document.getElementById("user-data-" + userID);
-    userDataElement.style.opacity = "0.2";
+    userDataElement.style.opacity = "0.4";
 }
 
 function UserRejoin(userID) {

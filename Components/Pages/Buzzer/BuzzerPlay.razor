@@ -189,6 +189,16 @@
             JS.InvokeVoidAsync("UserRejoin", userId);
             InvokeAsync(StateHasChanged);
         });
+        hubConnection.On<string>("ReceiveAskForPlayers", (connectionId) =>
+        {
+            hubConnection.SendAsync("AnswerOnAskForPlayers", connectionId, buzzerLobby.UserID);
+            InvokeAsync(StateHasChanged);
+        });
+        hubConnection.On<int>("ReceiveAnswerOnAskForPlayers", (userId) =>
+        {
+            JS.InvokeVoidAsync("UserRejoin", userId);
+            InvokeAsync(StateHasChanged);
+        });
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -211,7 +221,23 @@
             }
             points = buzzerLobby.Points;
             await InvokeAsync(StateHasChanged);
+            await Task.Delay(500);
+            foreach (BuzzerLobby buzzerLobby in buzzerLobbies)
+            {
+                if (buzzerLobby.UserID == userID) continue;
+                await JS.InvokeVoidAsync("UserLeave", buzzerLobby.UserID);
+            }
+            await hubConnection.SendAsync("AskForPlayers", lobbyId);
+            await InvokeAsync(StateHasChanged);
+            await AskForPlayer();
         } 
+    }
+
+    private async Task AskForPlayer()
+    {
+        await hubConnection.SendAsync("AskForPlayers", lobbyId);
+        await Task.Delay(60000);
+        AskForPlayer();
     }
 
     private async Task AddBuzzerLobby(int userId)
