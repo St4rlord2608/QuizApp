@@ -2,17 +2,39 @@
 @using QuizApp.Services
 @using QuizApp.Components.Icons
 @rendermode InteractiveServer
+@using QuizApp.Components.Icons
 @inject NavigationManager Navigation
 @inject UserService UserService
 @inject IJSRuntime JS
 
 <div class="header">
-    <div class="username-container input-group">
+    <div class="username-container input-group input-group-dark-mode">
         <span class="input-group-text">Username: </span>
         <input @bind="username" @bind:after="OnUsernameChange" class="username-input form-control" />
     </div>
+    <div class="mobile-menu-button-container">
+        <button type="button" class="btn btn-dark-mode btn-primary" data-bs-toggle="modal" data-bs-target="#mobile-menu">
+            <Heading Width="30" Height="30"/>
+        </button>
+    </div>
     <div class="home-icon-container">
         <a class="home-icon" href="/"><HouseFill Width="30" Height="30" /></a>
+    </div>
+</div>
+<div class="modal modal-dark-mode fade" id="mobile-menu" tabindex="-1" aria-labelledby="mobile-menu" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="exampleModalLabel">Menu</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="username-container input-group input-group-dark-mode">
+                    <span class="input-group-text">Username: </span>
+                    <input @bind="username" @bind:after="OnUsernameChange" class="username-input form-control" />
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

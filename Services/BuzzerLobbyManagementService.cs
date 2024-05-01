@@ -35,9 +35,9 @@ namespace QuizApp.Services
             return new string(Enumerable.Repeat(chars, 10).Select(s => s[random.Next(s.Length)]).ToArray());
         }
 
-        public void AddLobby(string lobbyCode)
+        public void AddLobby(string lobbyCode, int hostUserID)
         {
-            _buzzerRepository.AddLobby(lobbyCode, DateTime.Now);
+            _buzzerRepository.AddLobby(lobbyCode, DateTime.Now, hostUserID);
         }
 
         public void DeleteLobby(string lobbyCode)

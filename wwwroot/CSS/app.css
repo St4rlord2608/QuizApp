@@ -1,9 +1,29 @@
+:root {
+    --dark-mode-text: #DDD4ED;
+    --dark-mode-main-background: #212121;
+    --dark-mode-light-gray: #3D3D3D;
+    --dark-mode-input-text: #BCAADB;
+    --dark-mode-border: #907EB0;
+    --tablet-landscape-width: 1024px;
+    --tablet-viewport-width: 768px;
+    --phone-landscape-width: 499px;
+}
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    min-height: fit-content;
+}
+
+.page{
+    height: 100%;
+}
+
+.content{
+    height: 100%;
 }
 
 main{
-    margin-bottom: 60px;
+    margin-bottom: 50px;
 }
 
 a, .btn-link {

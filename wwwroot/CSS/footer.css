@@ -7,11 +7,18 @@
     bottom: 0;
     width: 100%;
     text-align: center;
-    background: lightgray;
+    background: #333333;
     box-shadow: 6px -8px 15px -5px rgba(0,0,0,0.69);
 }
 
     .footer .legal-terms-container {
         height: 100%;
         align-content: center;
+        a{
+            color: #BCAADB;
+        }
+
+        a:hover{
+            color: #DDD4ED;
+        }
     }
