@@ -4,6 +4,7 @@
 @using Microsoft.IdentityModel.Tokens
 @using QuizApp.Models
 @using QuizApp.Services
+@using QuizApp.Components.Icons
 @inject NavigationManager Navigation
 @inject BuzzerLobbyManagementService BuzzerService
 @inject IJSRuntime JS
@@ -14,45 +15,69 @@
     @if(buzzerLobbies.Count > 0)
     {
         <div>
-            <h1 class="title-centered">BuzzerPlay</h1>
-            <div class="input-group buzzer-host-text">
-              <span class="input-group-text">Text from Host</span>
-              <textarea value="@textFromHost" class="form-control" aria-label="Text from Host" readonly></textarea>
+            <div class="heading-container">
+                <h1 class="title-centered">BuzzerPlay</h1>
+                <div class="settings-container" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Settings">
+                    <button type="button" class="btn settings-button" data-bs-toggle="modal" data-bs-target="#settings-modal">
+                        <GearFill Width="30" Height="30"/>
+                    </button>
+                </div>
             </div>
-             <div class="buzzer-play-buzzer-container">
+            <div class="input-group input-group-dark-mode buzzer-host-text">
+                <span class="input-group-text">Text from Host</span>
+                <textarea value="@textFromHost" class="form-control" aria-label="Text from Host" readonly></textarea>
+            </div>
+            <div class="buzzer-play-buzzer-container">
                 <button id="buzzer" @onclick="Buzz" disabled="@lobbyData.IsBuzzed" class="btn btn-success buzzer-play-buzzer">Buzzer</button>
                 <div class="buzzer-play-buzzer-text">Buzzed user: @buzzedUserName</div>
-             </div>
-             <div class="buzzer-play-input-container">
-                <div class="input-group buzzer-play-input">
-                  <span class="input-group-text">Input</span>
-                  <textarea class="form-control" aria-label="Input" disabled="@buzzerLobby.TextLocked" @bind="text" @bind:event="oninput" @bind:after="InputChange"></textarea>
+            </div>
+            <div class="buzzer-play-input-container">
+                <div class="input-group input-group-dark-mode buzzer-play-input">
+                    <span class="input-group-text">Input</span>
+                    <textarea class="form-control" aria-label="Input" disabled="@buzzerLobby.TextLocked" @bind="text" @bind:event="oninput" @bind:after="InputChange"></textarea>
                 </div>
-                <button disabled="@buzzerLobby.TextLocked" @onclick="LockText" class="btn btn-primary">Lock answer</button>
-             </div>
+                <button disabled="@buzzerLobby.TextLocked" @onclick="LockText" class="btn btn-dark-mode btn-primary">Lock answer</button>
+            </div>
             <div class="buzzer-player-card-container">
                 @foreach (BuzzerLobby buzzerLobby in buzzerLobbies)
-                 {
-                <div class="card buzzer-player-card" id="user-data-@buzzerLobby.UserID">
-                  <div class="card-body">
-                    <h5 class="card-title buzzer-player-card-username">@UserDictionary[buzzerLobby.UserID].UserName</h5>
-                    <div class="card-subtitle mb-2 text-body-secondary">
-                        <div class="input-group mb-3">
-                          <span class="input-group-text" id="basic-addon1">Points</span>
-                          <input type="number" class="form-control" value="@buzzerLobby.Points" readonly>
+                {
+                    <div class="card card-dark-mode buzzer-player-card" id="user-data-@buzzerLobby.UserID">
+                        <div class="card-body">
+                            <h5 class="card-title buzzer-player-card-username">@UserDictionary[buzzerLobby.UserID].UserName</h5>
+                            <div class="card-subtitle mb-2 text-body-secondary">
+                                <div class="input-group input-group-dark-mode mb-3">
+                                    <span class="input-group-text" id="basic-addon1">Points</span>
+                                    <input type="number" class="form-control" value="@buzzerLobby.Points" readonly>
+                                </div>
+                            </div>
                         </div>
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="modal modal-dark-mode fade" id="settings-modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h1 class="modal-title fs-5" id="settings-modal-header">Settings</h1>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="volume-container">
+                            <label for="volume" class="form-label">Volume</label>
+                            <input @bind="vol" type="range" class="form-range" min="0" max="10" step="1" id="volume">
                         </div>
-                  </div>
+                    </div>
                 </div>
-            }
             </div>
         </div>
     }
     else
     {
-        <div>
-            <p>This Lobby doesnt exist</p>
-        </div>
+    <div class="failure-container-centered">
+        <h1>lobby doesnt exist!</h1>
+        <button type="button" class="btn btn-primary" onclick="@(() => Navigation.NavigateTo("/buzzer"))">Return to buzzer menu</button>
+    </div>
     }
 </div>
 
@@ -93,6 +118,7 @@
     private List<BuzzerLobby> buzzerLobbies = new List<BuzzerLobby>();
     private Dictionary<int, User> UserDictionary = new Dictionary<int, User>();
     private Lobby lobbyData;
+    private double vol = 1;
 
     private HubConnection? hubConnection;
 
@@ -122,7 +148,7 @@
             buzzedUserName = username;
             if (buzzState && userId != 0)
             {
-                JS.InvokeVoidAsync("PlayBuzzSound");
+                JS.InvokeVoidAsync("PlayBuzzSound", vol);
             }
             InvokeAsync(StateHasChanged);
         });
@@ -132,11 +158,11 @@
             {
                 if (correct)
                 {
-                    JS.InvokeVoidAsync("PlayCorrectSound");
+                    JS.InvokeVoidAsync("PlayCorrectSound", vol);
                 }
                 else
                 {
-                    JS.InvokeVoidAsync("PlayWrongSound");
+                    JS.InvokeVoidAsync("PlayWrongSound", vol);
                 }
             }
             if (userID == changeUserID)
@@ -172,7 +198,7 @@
         });
         hubConnection.On<int>("ReceiveKickPlayer", (userID) =>
         {
-            buzzerLobbies.RemoveAll(b => b.UserID == buzzerLobby.UserID);
+            buzzerLobbies.RemoveAll(b => b.UserID == userID);
             if(buzzerLobby.UserID == userID)
             {
                 Navigation.NavigateTo("/buzzer");
@@ -265,6 +291,7 @@
         {
             await hubConnection.SendAsync("ChangeBuzz", lobbyId, userID, username, lobbyData.IsBuzzed);
         }
+        await JS.InvokeVoidAsync("PlayBuzzSound", vol);
         await InvokeAsync(StateHasChanged);
     }
 

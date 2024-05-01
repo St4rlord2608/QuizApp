@@ -5,6 +5,7 @@
 @using QuizApp.Models
 @using QuizApp.Services
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 @inject BuzzerLobbyManagementService BuzzerService
 
 <div class="container-sm buzzer-index-container">
@@ -17,10 +18,10 @@
     }
     
     <button @onclick="CreateLobbyCode" class="btn btn-secondary buzzer-host-button">Host Lobby</button>
-    <div class="card buzzer-join-container">
+    <div class="card card-dark-mode buzzer-join-container">
         <div class="card-body">
             <h5 class="card-title">Join Lobby</h5>
-            <div class="input-group">
+            <div class="input-group input-group-dark-mode">
                 <input type="text" class="form-control" placeholder="Lobby code" aria-label="Lobby code" @bind="joinLobbyCode" @bind:event="oninput" @bind:after="OnLobbyCodeInput">
                 <button @onclick="JoinLobby" class="btn btn-success">Join Lobby</button>
             </div>
@@ -42,10 +43,21 @@
     private string joinLobbyCode = "";
     private bool hostingFailed = false;
     private bool lobbyDoesntExist = false;
+    private string username = "";
+    private int userID;
 
     protected override async Task OnInitializedAsync()
     {
 
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            username = await JS.InvokeAsync<string>("GetFromLocalStorage", "username");
+            userID = Convert.ToInt32(await JS.InvokeAsync<string>("GetFromLocalStorage", "userID"));
+        }
     }
 
     private void CreateLobbyCode()
@@ -66,7 +78,7 @@
             }
 
         }
-        BuzzerService.AddLobby(lobbyCode);
+        BuzzerService.AddLobby(lobbyCode, userID);
         Navigation.NavigateTo(hostUrl + lobbyCode);
     }
 

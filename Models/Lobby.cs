@@ -9,6 +9,7 @@ namespace QuizApp.Models
 
         public bool IsBuzzed { get; set; }
         public int BuzzedUserID { get; set; }
+        public int HostUserID { get; set; }
 
         public override string ToString() => JsonSerializer.Serialize<Lobby>(this);
     }

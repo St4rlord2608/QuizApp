@@ -39,12 +39,18 @@ function GetFromLocalStorage(key)
 
 function UserLeave(userID) {
     var userDataElement = document.getElementById("user-data-" + userID);
-    userDataElement.style.opacity = "0.4";
+    if (typeof(userDataElement) != 'undefined' && userDataElement != null)
+    {
+        userDataElement.style.opacity = "0.4";
+    }
 }
 
 function UserRejoin(userID) {
     var userDataElement = document.getElementById("user-data-" + userID);
-    userDataElement.style.opacity = "1.0";
+    if (typeof(userDataElement) != 'undefined' && userDataElement != null)
+    {
+        userDataElement.style.opacity = "1.0";
+    }
 }
 
 function InitTooltips() {
@@ -59,21 +65,21 @@ function AddOnClickBuzzerEventListener() {
     })
 }
 
-function PlayBuzzSound() {
+function PlayBuzzSound(vol = 0) {
     var sound = new Audio('/Media/Audio/buzzer.mp3');
-    sound.volume = 0.2; 
+    sound.volume = vol * 0.1; 
     sound.play();
 }
 
-function PlayCorrectSound() {
+function PlayCorrectSound(vol = 0) {
     var sound = new Audio('/Media/Audio/correct.mp3');
-    sound.volume = 0.2;
+    sound.volume = vol * 0.1;
     sound.play();
 }
 
-function PlayWrongSound() {
+function PlayWrongSound(vol = 0) {
     var sound = new Audio('/Media/Audio/wrong.mp3');
-    sound.volume = 0.2;
+    sound.volume = vol * 0.1;
     sound.play();
 }
 

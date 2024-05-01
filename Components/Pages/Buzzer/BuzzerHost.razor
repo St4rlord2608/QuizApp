@@ -11,124 +11,135 @@
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 <div class="container buzzer-host-container">
-    @if (lobbyData.LobbyCode != null)
+    @if (lobbyData.LobbyCode != null && lobbyData.HostUserID != userID)
     {
-        
+        <div class="failure-container-centered">
+            <h1>you are not the host of this lobby!</h1>
+            <button type="button" class="btn btn-primary" onclick="@(() => Navigation.NavigateTo("/buzzer/play/" + lobbyId))">Join as player</button>
+        </div>
+    }
+    else if (lobbyData.LobbyCode != null)
+    {
+
         <h1 class="title-centered">Host</h1>
         <div class="buzzer-lobby-code-container">
-            <input id="buzzer-lobby-code" class="form-control buzzer-lobby-code" type="text" value="@lobbyId" aria-label="Lobby_code" readonly>
+            <input id="buzzer-lobby-code" class="form-control form-control-dark-mode buzzer-lobby-code" type="text" value="@lobbyId" aria-label="Lobby_code" readonly>
             <button type="button" class="btn btn-primary" onclick="copyToClipboard()" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Copy to clipboard">
-                <ClipboardFill Height="25" Width="25" />
+                <ClipboardFill Height="25" Width="25"/>
             </button>
             <span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Settings">
-                <button type="button" class="btn settings-button" data-bs-toggle="modal" data-bs-target="#settings-modal" >
-                <GearFill Width="30" Height="30" />
-            </button>
+                <button type="button" class="btn settings-button" data-bs-toggle="modal" data-bs-target="#settings-modal">
+                    <GearFill Width="30" Height="30"/>
+                </button>
             </span>
         </div>
-        <div class="input-group buzzer-host-text-container">
-          <span class="input-group-text">Text for players</span>
-          <textarea @bind="textForPlayers" @bind:after="TextForPlayersChange" class="form-control" aria-label="Text for players"></textarea>
+        <div class="input-group input-group-dark-mode buzzer-host-text-container">
+            <span class="input-group-text">Text for players</span>
+            <textarea @bind="textForPlayers" @bind:after="TextForPlayersChange" class="form-control" aria-label="Text for players"></textarea>
         </div>
-        <div class="input-group buzzer-host-number-guess-container">
+        <div class="input-group input-group-dark-mode buzzer-host-number-guess-container">
             <span class="input-group-text">Searched Number</span>
             <input @bind="searchedNumber" @bind:after="SearchedNumberChange" class="form-control" aria-label="Searched Number"/>
         </div>
-        <div class="card buzzer-host-buzzer-container">
-          <div class="card-body">
-            <h5 class="card-title">Buzzer</h5>
-            <h6 class="card-subtitle mb-2 text-body-secondary">Buzzered User: @buzzedUserName</h6>
-            <div class="card-text">
-                
-                <div class="btn-group" role="group" aria-label="Basic mixed styles example">
-                  <button @onclick="UserScored" disabled="@(!lobbyData.IsBuzzed || lobbyData.BuzzedUserID == 0)" class="btn btn-success">Score</button>
+        <div class="card card-dark-mode buzzer-host-buzzer-container">
+            <div class="card-body">
+                <h5 class="card-title">Buzzer</h5>
+                <h6 class="card-subtitle mb-2 text-body-secondary">Buzzered User: <span class="buzzed-user">@buzzedUserName</span></h6>
+                <div class="card-text">
+
+                    <div class="buzzer-buttons">
+                        <button @onclick="UserScored" disabled="@(!lobbyData.IsBuzzed || lobbyData.BuzzedUserID == 0)" class="btn btn-success">Score</button>
                         <button @onclick="UserFailed" disabled="@(!lobbyData.IsBuzzed || lobbyData.BuzzedUserID == 0)" class="btn btn-danger">Fail</button>
-                  <button @onclick="ChangeBuzzerState" class="btn btn-primary">@buzzerText</button>
+                        <button @onclick="ChangeBuzzerState" class="btn btn-primary">@buzzerText</button>
+                        <button @onclick="UnlockText" class="btn btn-warning">Unlock all texts</button>
+                    </div>
+                    
                 </div>
             </div>
-          </div>
-        </div>
-        
-        <div class="buzzer-host-unlock-all-text">   
-            <button @onclick="UnlockText" class="btn btn-warning">Unlock all texts</button>
         </div>
         <div class="buzzer-player-card-container">
             @foreach (BuzzerLobby buzzerLobby in buzzerLobbies)
             {
-                <div class="card buzzer-player-card" id="user-data-@buzzerLobby.UserID">
-                  <div class="card-body">
+                <div class="card card-dark-mode buzzer-player-card" id="user-data-@buzzerLobby.UserID">
+                    <div class="card-body">
                         <button onclick="@(() => OpenKickModal(buzzerLobby))" class="btn-close buzzer-host-kick-player-button"
-                                aria-label="close" data-bs-toggle="modal" data-bs-target="#kick-modal" />
-                    <h5 class="card-title buzzer-player-card-username">@UserDictionary[buzzerLobby.UserID].UserName</h5>
-                    <div class="card-subtitle mb-2 text-body-secondary">
-                        <div class="input-group mb-3">
-                          <span class="input-group-text" id="basic-addon1">Points</span>
-                          <input type="number" class="form-control" value="@buzzerLobby.Points" onchange="@((ChangeEventArgs e) => UserPointsChanged(e, buzzerLobby))">
+                                aria-label="close" data-bs-toggle="modal" data-bs-target="#kick-modal"/>
+                        <h5 class="card-title buzzer-player-card-username">@UserDictionary[buzzerLobby.UserID].UserName</h5>
+                        <div class="card-subtitle mb-2 text-body-secondary">
+                            <div class="input-group input-group-dark-mode mb-3">
+                                <span class="input-group-text" id="basic-addon1">Points</span>
+                                <input type="number" class="form-control" value="@buzzerLobby.Points" onchange="@((ChangeEventArgs e) => UserPointsChanged(e, buzzerLobby))">
+                            </div>
                         </div>
+                        <div class="card-text">
+                            <div class="input-group input-group-dark-mode">
+                                <textarea value="@buzzerLobby.Text" class="form-control" aria-label="Text from player" readonly/>
+                            </div>
                         </div>
-                    <div class="card-text">
-                       <div class="input-group">
-                            <textarea value="@buzzerLobby.Text" class="form-control" aria-label="Text from player" readonly/>
-                       </div>
                     </div>
-                  </div>
-                  <ul class="list-group list-group-flush">
-                    <li class="list-group-item">
-                          <div class="input-group buzzer-host-player-card-checkbox-container">
-                              <span class="input-group-text" id="basic-addon1">Text Locked</span>
-                              <div class="input-group-text">
-                                  <input type="checkbox" class="form-check-input" disabled checked="@buzzerLobby.TextLocked"/>
-                              </div>
-                           </div>
-                      </li>
-                    <li class="list-group-item"><button class="btn btn-success" disabled="@(!buzzerLobby.TextLocked)" onclick="@(() => UserTextIsCorrect(buzzerLobby))">Give Points</button></li>
-                    <li class="list-group-item"><button class="btn btn-warning" disabled="@(!buzzerLobby.TextLocked)" onclick="@(() => UnlockSingleText(buzzerLobby))">Unlock Text</button></li>
-                  </ul>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <div class="input-group input-group-dark-mode buzzer-host-player-card-checkbox-container">
+                                <span class="input-group-text" id="basic-addon1">Locked</span>
+                                <div class="input-group-text">
+                                    <input type="checkbox" class="form-check-input" disabled checked="@buzzerLobby.TextLocked"/>
+                                </div>
+                                <button class="btn btn-warning" disabled="@(!buzzerLobby.TextLocked)" onclick="@(() => UnlockSingleText(buzzerLobby))">Unlock Text</button>
+                                <button class="btn btn-success give-points-button" disabled="@(!buzzerLobby.TextLocked)" onclick="@(() => UserTextIsCorrect(buzzerLobby))">Give Points</button>
+                            </div>
+                        </li>
+                    </ul>
                 </div>
             }
         </div>
-        <div class="modal fade" id="kick-modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal modal-dark-mode fade" id="kick-modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h1 class="modal-title fs-5" id="settings-modal-header">Kick Player @playerToKickName</h1>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <p>The user will be removed completely. So every progress in this lobby will be lost for him</p>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                    <div class="modal-body">
+                        <p>The user will be removed completely. So every progress in this lobby will be lost for him</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="@(() => KickPlayer())">Kick</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal modal-dark-mode fade" id="settings-modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h1 class="modal-title fs-5" id="settings-modal-header">Settings</h1>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="input-group input-group-dark-mode correct-answer-container">
+                            <span class="input-group-text">Points for correct answer</span>
+                            <input type="number" class="form-control" @bind="scorePoints"/>
+                        </div>
+                        <div class="input-group input-group-dark-mode incorrect-answer-container">
+                            <span class="input-group-text">Points for incorrect answer</span>
+                            <input type="number" class="form-control" @bind="failPoints"/>
+                        </div>
+                        <div class="volume-container">
+                            <label for="volume" class="form-label">Volume</label>
+                            <input @bind="vol" type="range" class="form-range" min="0" max="10" step="1" id="volume">
                         </div>
                     </div>
                 </div>
             </div>
-        <div class="modal fade" id="settings-modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-          <div class="modal-dialog">
-            <div class="modal-content">
-              <div class="modal-header">
-                <h1 class="modal-title fs-5" id="settings-modal-header">Settings</h1>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-              </div>
-              <div class="modal-body">
-                 <div class="input-group correct-answer-container">
-                    <span class="input-group-text">Points for correct answer</span>
-                    <input type="number" class="form-control" @bind="scorePoints" />
-                </div>
-                <div class="input-group incorrect-answer-container">
-                    <span class="input-group-text">Points for incorrect answer</span>
-                    <input type="number" class="form-control" @bind="failPoints" />
-                </div>
-                
-              </div>
-            </div>
-          </div>
         </div>
     }
     else
     {
-        <div>lobby doesnt exist</div>
+        <div class="failure-container-centered">
+            <h1>lobby doesnt exist!</h1>
+            <button type="button" class="btn btn-primary" onclick="@(() => Navigation.NavigateTo("/buzzer"))">Return to buzzer menu</button>
+        </div>
     }
 </div>
 <script>
@@ -156,6 +167,9 @@
     private string buzzerText => lobbyData.IsBuzzed? "Reset Buzzer" : "Lock Buzzer";
     private BuzzerLobby playerToKick = new BuzzerLobby();
     private string playerToKickName = "";
+    private string username = "";
+    private int userID;
+    private double vol = 1;
 
     protected override async Task OnInitializedAsync()
     {
@@ -167,8 +181,8 @@
             UserDictionary.Add(buzzerLobby.UserID, UserService.GetUser(buzzerLobby.UserID));
         }
         lobbyData = BuzzerService.GetLobby(lobbyId);
-        await hubConnection.StartAsync();
-        await hubConnection.SendAsync("AddToGroup", lobbyId);
+            await hubConnection.StartAsync(); 
+            await hubConnection.SendAsync("AddToGroup", lobbyId);
     }
 
     private async Task InitHubConnection()
@@ -184,7 +198,7 @@
             buzzedUserName = username;
             if (buzzState && userId != 0)
             {
-                JS.InvokeVoidAsync("PlayBuzzSound");
+                JS.InvokeVoidAsync("PlayBuzzSound", vol);
             }
             InvokeAsync(StateHasChanged);
         });
@@ -229,19 +243,31 @@
     {
         if (firstRender)
         {
+            username = await JS.InvokeAsync<string>("GetFromLocalStorage", "username");
+            userID = Convert.ToInt32(await JS.InvokeAsync<string>("GetFromLocalStorage", "userID"));
             await Task.Delay(500);
-            foreach(BuzzerLobby buzzerLobby in buzzerLobbies)
+                foreach(BuzzerLobby buzzerLobby in buzzerLobbies)
+                {
+                    await JS.InvokeVoidAsync("UserLeave", buzzerLobby.UserID);
+                }
+
+            if (hubConnection is not null)
             {
-                await JS.InvokeVoidAsync("UserLeave", buzzerLobby.UserID);
+                await hubConnection.SendAsync("AskForPlayers", lobbyId);
             }
-            await hubConnection.SendAsync("AskForPlayers", lobbyId);
+
             AskForPlayer();
+            await InvokeAsync(StateHasChanged);
         }
     }
 
     private async Task AskForPlayer()
     {
-        await hubConnection.SendAsync("AskForPlayers", lobbyId);
+        if (hubConnection is not null)
+        {
+            await hubConnection.SendAsync("AskForPlayers", lobbyId);
+        }
+
         await Task.Delay(60000);
         AskForPlayer();
     }
@@ -295,7 +321,7 @@
                 newPoints = buzzerLobby.Points + scorePoints;
             }
             buzzerLobby.Points = newPoints;
-            await JS.InvokeVoidAsync("PlayCorrectSound");
+            await JS.InvokeVoidAsync("PlayCorrectSound", vol);
             await ChangePoints(buzzerLobby, true, true);
         }
         await ChangeBuzzerState();
@@ -311,7 +337,7 @@
                 newPoints = buzzerLobby.Points;
             }
             buzzerLobby.Points = newPoints;
-            await JS.InvokeVoidAsync("PlayWrongSound");
+            await JS.InvokeVoidAsync("PlayWrongSound", vol);
             await ChangePoints(buzzerLobby, true);
         }
         await ChangeBuzzerState();

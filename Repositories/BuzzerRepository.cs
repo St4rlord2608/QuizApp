@@ -37,6 +37,9 @@ namespace QuizApp.Repositories
                             Lobby lobby = new Lobby();
                             lobby.LobbyCode = reader.GetValue(reader.GetOrdinal("LobbyCode")).ToString();
                             lobby.CreationDateTime = (DateTime)reader.GetValue(reader.GetOrdinal("CreationDateTime"));
+                            lobby.IsBuzzed = (bool)reader.GetValue(reader.GetOrdinal("IsBuzzed"));
+                            lobby.BuzzedUserID = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("BuzzedUserID")));
+                            lobby.HostUserID = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("HostUserID")));
                             lobbies.Add(lobby);
 
                         }
@@ -70,6 +73,7 @@ namespace QuizApp.Repositories
                             lobby.CreationDateTime = (DateTime)reader.GetValue(reader.GetOrdinal("CreationDateTime"));
                             lobby.IsBuzzed = (bool)reader.GetValue(reader.GetOrdinal("IsBuzzed"));
                             lobby.BuzzedUserID = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("BuzzedUserID")));
+                            lobby.HostUserID = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("HostUserID")));
                         }
                         conn.Close();
                     }
@@ -181,16 +185,17 @@ namespace QuizApp.Repositories
             }
         }
 
-        public void AddLobby(string lobbyCode, DateTime creationDateTime)
+        public void AddLobby(string lobbyCode, DateTime creationDateTime, int hostUserID)
         {
             try
             {
                 using var conn = new SqlConnection(DBConnectionString);
                 {
                     conn.Open();
-                    var command = new SqlCommand("INSERT INTO Lobby(LobbyCode, CreationDateTime) VALUES(@LobbyCode, @CreationDateTime)", conn);
+                    var command = new SqlCommand("INSERT INTO Lobby(LobbyCode, CreationDateTime, HostUserID) VALUES(@LobbyCode, @CreationDateTime, @HostUserID)", conn);
                     command.Parameters.AddWithValue("@LobbyCode", lobbyCode);
                     command.Parameters.AddWithValue("@CreationDateTime", creationDateTime.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                    command.Parameters.AddWithValue("@HostUserID", hostUserID);
                     command.ExecuteNonQuery();
                     conn.Close();
                 }

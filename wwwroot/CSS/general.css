@@ -1,8 +1,80 @@
-﻿body {
+﻿
+body {
+    min-height: 100vh;
+    background: var(--dark-mode-main-background);
+    color: var(--dark-mode-text);
 }
 
 .text-container{
     width: 80%;
     margin-left: auto;
     margin-right: auto;
+}
+
+.failure-container-centered{
+    text-align: center;
+    margin-top: 100px;
+}
+
+.input-group-dark-mode{
+    color: var(--dark-mode-text);
+    box-shadow: 2px 3px 22px -3px rgba(0,0,0,0.78);
+    .input-group-text{
+        background: var(--dark-mode-light-gray);
+        color: var(--dark-mode-input-text);
+        border: 1px solid var(--dark-mode-input-text);
+    }
+
+    .form-control{
+        background: #2E2E2E;
+        color: var(--dark-mode-text);
+        border: 1px solid var(--dark-mode-input-text);
+    }
+}
+
+.card-dark-mode{
+    .input-group-dark-mode {
+        box-shadow: none;
+    }
+}
+
+.form-control.form-control-dark-mode{
+    background: #2E2E2E;
+    color: var(--dark-mode-text);
+    border: 1px solid var(--dark-mode-input-text);
+}
+
+.card-dark-mode{
+    background: var(--dark-mode-light-gray);
+    border: 2px solid var(--dark-mode-border);
+    color: var(--dark-mode-text);
+    box-shadow: 2px 3px 22px -3px rgba(0,0,0,0.78);
+
+    .list-group-item{
+        background: var(--dark-mode-light-gray);
+    }
+}
+
+.btn-dark-mode{
+    color: var(--dark-mode-text);
+    box-shadow: 2px 3px 22px -3px rgba(0,0,0,0.78);
+}
+
+.modal-dark-mode{
+    .modal-content{
+        background: var(--dark-mode-light-gray);
+        border: 2px solid var(--dark-mode-border);
+        color: var(--dark-mode-text);
+    }
+    
+    .modal-header{
+        background: var(--dark-mode-light-gray);
+        border: 2px solid var(--dark-mode-border);
+        color: var(--dark-mode-text);
+    }
+    .modal-footer{
+        background: var(--dark-mode-light-gray);
+        border: 2px solid var(--dark-mode-border);
+        color: var(--dark-mode-text);
+    }
 }
