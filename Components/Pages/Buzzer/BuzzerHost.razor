@@ -7,18 +7,19 @@
 @using QuizApp.Models
 @inject NavigationManager Navigation
 @inject BuzzerLobbyManagementService BuzzerService
+@inject GeneralLobbyService LobbyService
 @inject UserService UserService
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 <div class="container buzzer-host-container">
-    @if (lobbyData.LobbyCode != null && lobbyData.HostUserID != userID)
+    @if (lobbyData.LobbyCode != null && lobbyData.HostUserID != userID && lobbyData.LobbyType == (int)GeneralLobbyService.LobbyTypeEnum.Buzzer)
     {
         <div class="failure-container-centered">
             <h1>you are not the host of this lobby!</h1>
             <button type="button" class="btn btn-primary" onclick="@(() => Navigation.NavigateTo("/buzzer/play/" + lobbyId))">Join as player</button>
         </div>
     }
-    else if (lobbyData.LobbyCode != null)
+    else if (lobbyData is { LobbyCode: not null, LobbyType: (int)GeneralLobbyService.LobbyTypeEnum.Buzzer })
     {
 
         <h1 class="title-centered">Host</h1>
@@ -48,8 +49,8 @@
                 <div class="card-text">
 
                     <div class="buzzer-buttons">
-                        <button @onclick="UserScored" disabled="@(!lobbyData.IsBuzzed || lobbyData.BuzzedUserID == 0)" class="btn btn-success">Score</button>
-                        <button @onclick="UserFailed" disabled="@(!lobbyData.IsBuzzed || lobbyData.BuzzedUserID == 0)" class="btn btn-danger">Fail</button>
+                        <button @onclick="UserScored" disabled="@(!LobbyBuzzData.IsBuzzed || LobbyBuzzData.BuzzedUserID == 0)" class="btn btn-success">Score</button>
+                        <button @onclick="UserFailed" disabled="@(!LobbyBuzzData.IsBuzzed || LobbyBuzzData.BuzzedUserID == 0)" class="btn btn-danger">Fail</button>
                         <button @onclick="ChangeBuzzerState" class="btn btn-primary">@buzzerText</button>
                         <button @onclick="UnlockText" class="btn btn-warning">Unlock all texts</button>
                     </div>
@@ -164,7 +165,8 @@
     private Dictionary<int, User> UserDictionary = new Dictionary<int, User>();
     private HubConnection? hubConnection;
     private Lobby lobbyData;
-    private string buzzerText => lobbyData.IsBuzzed? "Reset Buzzer" : "Lock Buzzer";
+    private LobbyBuzzData LobbyBuzzData;
+    private string buzzerText => LobbyBuzzData.IsBuzzed? "Reset Buzzer" : "Lock Buzzer";
     private BuzzerLobby playerToKick = new BuzzerLobby();
     private string playerToKickName = "";
     private string username = "";
@@ -180,7 +182,8 @@
         {
             UserDictionary.Add(buzzerLobby.UserID, UserService.GetUser(buzzerLobby.UserID));
         }
-        lobbyData = BuzzerService.GetLobby(lobbyId);
+        lobbyData = LobbyService.GetLobby(lobbyId);
+        LobbyBuzzData = BuzzerService.GetLobbyBuzzData(lobbyId);
             await hubConnection.StartAsync(); 
             await hubConnection.SendAsync("AddToGroup", lobbyId);
     }
@@ -193,8 +196,9 @@
 
         hubConnection.On<int, string, bool>("ReceiveBuzzChange", (userId, username, buzzState) =>
         {
-            lobbyData.IsBuzzed = buzzState;
-            lobbyData.BuzzedUserID = userId;
+            if (LobbyBuzzData.IsBuzzed) return;
+            LobbyBuzzData.IsBuzzed = buzzState;
+            LobbyBuzzData.BuzzedUserID = userId;
             buzzedUserName = username;
             if (buzzState && userId != 0)
             {
@@ -274,7 +278,7 @@
 
     private async void RefreshLobbyTime()
     {
-        BuzzerService.RefreshLobbyTime(lobbyId);
+        LobbyService.RefreshLobbyTime(lobbyId);
         await Task.Delay(1740000);
         RefreshLobbyTime();
     }
@@ -316,7 +320,7 @@
         foreach(BuzzerLobby buzzerLobby in buzzerLobbies)
         {
             int newPoints = buzzerLobby.Points;
-            if (buzzerLobby.UserID == lobbyData.BuzzedUserID)
+            if (buzzerLobby.UserID == LobbyBuzzData.BuzzedUserID)
             {
                 newPoints = buzzerLobby.Points + scorePoints;
             }
@@ -332,7 +336,7 @@
         foreach (BuzzerLobby buzzerLobby in buzzerLobbies)
         {
             int newPoints = buzzerLobby.Points + failPoints;
-            if (buzzerLobby.UserID == lobbyData.BuzzedUserID)
+            if (buzzerLobby.UserID == LobbyBuzzData.BuzzedUserID)
             {
                 newPoints = buzzerLobby.Points;
             }
@@ -354,13 +358,13 @@
 
     private async Task ChangeBuzzerState()
     {
-        lobbyData.IsBuzzed = !lobbyData.IsBuzzed;
-        lobbyData.BuzzedUserID = 0;
+        LobbyBuzzData.IsBuzzed = !LobbyBuzzData.IsBuzzed;
+        LobbyBuzzData.BuzzedUserID = 0;
         buzzedUserName = "";
-        BuzzerService.ChangeBuzzedStateForLobby(lobbyId, lobbyData.IsBuzzed, lobbyData.BuzzedUserID);
+        BuzzerService.ChangeBuzzedStateForLobby(lobbyId, LobbyBuzzData.IsBuzzed, LobbyBuzzData.BuzzedUserID);
         if (hubConnection is not null)
         {
-            await hubConnection.SendAsync("ChangeBuzz", lobbyId, 0, "", lobbyData.IsBuzzed);
+            await hubConnection.SendAsync("ChangeBuzz", lobbyId, 0, "", LobbyBuzzData.IsBuzzed);
         }
         await InvokeAsync(StateHasChanged);
     }

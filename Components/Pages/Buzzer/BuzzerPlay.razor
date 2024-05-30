@@ -7,12 +7,13 @@
 @using QuizApp.Components.Icons
 @inject NavigationManager Navigation
 @inject BuzzerLobbyManagementService BuzzerService
+@inject GeneralLobbyService LobbyService
 @inject IJSRuntime JS
 @inject UserService UserService
 @implements IAsyncDisposable
 
 <div class="container-sm buzzer-play-container">
-    @if(buzzerLobbies.Count > 0)
+    @if(buzzerLobbies.Count > 0 && lobbyData.LobbyType == (int)GeneralLobbyService.LobbyTypeEnum.Buzzer)
     {
         <div>
             <div class="heading-container">
@@ -28,7 +29,7 @@
                 <textarea value="@textFromHost" class="form-control" aria-label="Text from Host" readonly></textarea>
             </div>
             <div class="buzzer-play-buzzer-container">
-                <button id="buzzer" @onclick="Buzz" disabled="@lobbyData.IsBuzzed" class="btn btn-success buzzer-play-buzzer">Buzzer</button>
+                <button id="buzzer" @onclick="Buzz" disabled="@lobbyBuzzData.IsBuzzed" class="btn btn-success buzzer-play-buzzer">Buzzer</button>
                 <div class="buzzer-play-buzzer-text">Buzzed user: @buzzedUserName</div>
             </div>
             <div class="buzzer-play-input-container">
@@ -118,6 +119,7 @@
     private List<BuzzerLobby> buzzerLobbies = new List<BuzzerLobby>();
     private Dictionary<int, User> UserDictionary = new Dictionary<int, User>();
     private Lobby lobbyData;
+    private LobbyBuzzData lobbyBuzzData;
     private double vol = 1;
 
     private HubConnection? hubConnection;
@@ -129,7 +131,8 @@
         {
             UserDictionary.Add(buzzerLobby.UserID, UserService.GetUser(buzzerLobby.UserID));
         }
-        lobbyData = BuzzerService.GetLobby(lobbyId);
+        lobbyData = LobbyService.GetLobby(lobbyId);
+        lobbyBuzzData = BuzzerService.GetLobbyBuzzData(lobbyId);
         await InitHubConnection();
         await hubConnection.StartAsync();
         await hubConnection.SendAsync("AddToGroup", lobbyId);
@@ -143,8 +146,8 @@
 
         hubConnection.On<int, string, bool>("ReceiveBuzzChange", (userId, username, buzzState) =>
         {
-            lobbyData.IsBuzzed = buzzState;
-            lobbyData.BuzzedUserID = userID;
+            lobbyBuzzData.IsBuzzed = buzzState;
+            lobbyBuzzData.BuzzedUserID = userID;
             buzzedUserName = username;
             if (buzzState && userId != 0)
             {
@@ -284,12 +287,12 @@
 
     private async void Buzz()
     {
-        lobbyData.IsBuzzed = !lobbyData.IsBuzzed;
-        BuzzerService.ChangeBuzzedStateForLobby(lobbyId, lobbyData.IsBuzzed, userID);
+        lobbyBuzzData.IsBuzzed = true;
+        BuzzerService.ChangeBuzzedStateForLobby(lobbyId, lobbyBuzzData.IsBuzzed, userID);
         buzzedUserName = username;
         if (hubConnection is not null)
         {
-            await hubConnection.SendAsync("ChangeBuzz", lobbyId, userID, username, lobbyData.IsBuzzed);
+            await hubConnection.SendAsync("ChangeBuzz", lobbyId, userID, username, lobbyBuzzData.IsBuzzed);
         }
         await JS.InvokeVoidAsync("PlayBuzzSound", vol);
         await InvokeAsync(StateHasChanged);

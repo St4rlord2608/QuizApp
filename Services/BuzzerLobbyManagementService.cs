@@ -1,6 +1,4 @@
-﻿using Microsoft.Data.SqlClient;
-using QuizApp.Models;
-using System.Text.Json;
+﻿using QuizApp.Models;
 using QuizApp.Repositories;
 
 namespace QuizApp.Services
@@ -19,53 +17,21 @@ namespace QuizApp.Services
         private BuzzerRepository _buzzerRepository;
         private Random random = new Random();
 
-        public IEnumerable<Lobby> GetLobbies()
+        public LobbyBuzzData GetLobbyBuzzData(string lobbyCode)
         {
-            return _buzzerRepository.GetLobbies();  
+            return _buzzerRepository.GetLobbyBuzzData(lobbyCode);
         }
 
-        public Lobby GetLobby(string lobbyCode)
+        public void AddLobbyBuzzData(string lobbyCode)
         {
-            return _buzzerRepository.GetLobby(lobbyCode);
-        }
-
-        public string CreateLobbyCode()
-        {
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-            return new string(Enumerable.Repeat(chars, 10).Select(s => s[random.Next(s.Length)]).ToArray());
-        }
-
-        public void AddLobby(string lobbyCode, int hostUserID)
-        {
-            _buzzerRepository.AddLobby(lobbyCode, DateTime.Now, hostUserID);
-        }
-
-        public void DeleteLobby(string lobbyCode)
-        {
-            _buzzerRepository.DeleteLobby(lobbyCode);
+            _buzzerRepository.AddLobbyBuzzData(lobbyCode);
         }
 
         public void DeleteBuzzerLobby(string lobbyCode, int userID)
         { 
             _buzzerRepository.DeleteBuzzerLobby(lobbyCode,  userID);
         }
-
-            public void RefreshLobbyTime(string lobbyCode)
-        {
-            _buzzerRepository.UpdateLobbyCreationDateTime(lobbyCode, DateTime.Now);
-        }
-
-        public void CheckForExpiredLobbies()
-        {
-            var lobbies = GetLobbies().ToList();
-            foreach( Lobby lobby in lobbies)
-            {
-                if(DateTime.Now > lobby.CreationDateTime.AddMinutes(30))
-                {
-                    DeleteLobby(lobby.LobbyCode);
-                }
-            }
-        }
+            
         public void AddBuzzerLobby(string lobbyCode, int userID, int points)
         {
             _buzzerRepository.AddBuzzerLobby(lobbyCode, userID, points);

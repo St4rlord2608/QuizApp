@@ -1,0 +1,236 @@
+﻿@page "/skyjo/{lobbyId?}"
+@rendermode InteractiveServer
+@using Google.Protobuf.WellKnownTypes
+@using QuizApp.Models
+@inject QuizApp.Services.SkyjoService SkyjoService
+@inject Services.GeneralLobbyService LobbyService
+@inject Services.UserService UserService
+@inject IJSRuntime JS
+
+<div class="container skyjo-container">
+    <h3 class="title-centered">SkyjoPlay</h3>
+    <h4>Player turn: </h4>
+    <h5>@skyjoLobbyData.GameState</h5>
+    @if (skyjoLobbyData.GameState != (int)GameState.RoundEnd)
+    {
+        <div class="card-stack-container">
+            <div class="filing-stack">
+                <div @onclick="HandleLastDroppedCardClick" class="card card-dark-mode" style="width: 18rem;">
+                    <div class="card-body">
+                        @if (LastDroppedCard != null)
+                        {
+                            <h5>@LastDroppedCard.Value</h5>
+                        }
+                        else
+                        {
+                            <h5>No Cards dropped</h5>
+                        }
+                        
+                    </div>
+                </div>
+            </div>
+            <div class="drawn-card">
+                @if (DrawnCard != null)
+                {
+                    <div class="card card-dark-mode" style="width: 18rem;">
+                        <div class="card-body">
+                            <h5>@DrawnCard</h5>
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="card-stack">
+                <div onclick="@(() => { TakeCard(CardStack[0]); })" class="card card-dark-mode" style="width: 18rem;">
+                    <div class="card-body">
+                        <h5>Draw Card</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <button @onclick="StartRound">Start Round</button>
+    }
+    
+    <div class="card-container">
+        @foreach (KeyValuePair<int, SkyjoCard> card in CardDictionary)
+        {
+        <div onclick="@(() => { HandleCardClick(card.Value); })" class="card card-dark-mode @(card.Value.IsTurned ? "card-inactive" : "")" style="width: 18rem;">
+            <div class="card-body">
+                @if (card.Value.IsTurned)
+                {
+                    <h5 class="card-title">@card.Value.Value</h5>
+                }
+                else
+                {
+                    <h5>Card not turned</h5>
+                    <p>@card.Value.Value</p>
+                }
+                
+            </div>
+        </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? lobbyId { get; set; }
+
+    public enum GameState
+    {
+        Start,
+        TurnCard,
+        DrawCard,
+        ChangeCard,
+        RejectCard,
+        RoundEnd = 0
+    }
+
+    public List<SkyjoCard> CardStack = new();
+    public SkyjoCard? LastDroppedCard;
+    public SkyjoCard? DrawnCard;
+    public bool DrawnCardIsNew = false;
+    private Dictionary<int, User> UserDictionary = new();
+    public Dictionary<int, SkyjoCard> CardDictionary = new();
+    private List<SkyjoLobby> skyjoLobbies = new();
+    private Lobby lobbyData;
+    private LobbySkyjoData skyjoLobbyData = new();
+    private User user = new();
+    private string username;
+    private int userID;
+    private SkyjoLobby skyjoLobby = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            username = await JS.InvokeAsync<string>("GetFromLocalStorage", "username");
+            userID = Convert.ToInt32(await JS.InvokeAsync<string>("GetFromLocalStorage", "userID"));
+            lobbyData = LobbyService.GetLobby(lobbyId);
+            skyjoLobby = SkyjoService.GetSkyjoLobby(lobbyId, userID);
+            if (skyjoLobby.LobbyCode == null)
+            {
+                //BuzzerService.AddBuzzerLobby(lobbyId, userID, 0);
+                //buzzerLobby = new BuzzerLobby() { LobbyCode = lobbyId, UserID = userID, Points = 0 };
+                //await hubConnection.SendAsync("JoinedLobby", lobbyData.LobbyCode, userID, username);
+                //await AddBuzzerLobby(userID);
+                SkyjoService.AddSkyjoLobby(lobbyId, userID, 0);
+                skyjoLobby = new SkyjoLobby() { LobbyCode = lobbyId, UserId = userID, Points = 0 };
+            }
+            else
+            {
+                //await hubConnection.SendAsync("ReJoinLoby", lobbyData.LobbyCode, userID);
+            }
+
+            skyjoLobbies = SkyjoService.GetAllSkyjoLobbiesForLobby(lobbyId).ToList();
+            foreach (var skyjoLobby in skyjoLobbies)
+            {
+                UserDictionary.Add(skyjoLobby.UserId, new User() { UserID = skyjoLobby.UserId });
+            }
+
+            CardStack = SkyjoService.InitCardList();
+            skyjoLobbyData = SkyjoService.GetLobbySkyjoData(lobbyId);
+            CardStack = SkyjoService.CreateCardStack(skyjoLobbyData);
+            Init();
+
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void Init()
+    {
+        var skyjoCards = SkyjoService.GetAllSkyjoCardsForPlayer(lobbyId, userID);
+        if (skyjoCards != null && skyjoCards.Count > 0)
+        {
+            foreach (var skyjoCard in skyjoCards)
+            {
+                CardDictionary.Add(skyjoCard.Position, skyjoCard);
+            }
+        }
+    }
+
+    private void StartRound()
+    {
+        SkyjoService.DeleteAllSkyjoCardsForPlayer(lobbyId, userID);
+        for (var i = 0; i < 12; i++)
+        {
+            var skyjoCard = new SkyjoCard() { LobbyCode = lobbyId, PlayerId = userID, Value = CardStack[skyjoLobbyData.UsedCards].Value, Position = i, IsTurned = false };
+            CardDictionary.Add(i, skyjoCard);
+            skyjoLobbyData.UsedCards++;
+            SkyjoService.AddSkyjoCard(skyjoCard);
+        }
+        SkyjoService.UpdateLobbySkyjoData(skyjoLobbyData);
+    }
+
+    private async void HandleCardClick(SkyjoCard card)
+    {
+        if (skyjoLobbyData.GameState == (int)GameState.Start || skyjoLobbyData.GameState == (int)GameState.RejectCard)
+        {
+            if (!card.IsTurned)
+            {
+                card.IsTurned = true;
+                skyjoLobbyData.GameState = (int)GameState.TurnCard;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        else if (skyjoLobbyData.GameState == (int)GameState.DrawCard)
+        {
+            ChangeCard(card);
+        }
+    }
+
+    private async void HandleLastDroppedCardClick()
+    {
+        if (skyjoLobbyData.GameState == (int)GameState.DrawCard)
+        {
+            RejectCard();
+        }
+        else if (skyjoLobbyData.GameState == (int)GameState.Start && LastDroppedCard != null)
+        {
+            TakeCard(LastDroppedCard, false);
+        }
+    }
+
+
+    private async void TakeCard(SkyjoCard newCard, bool isNewCard = true)
+    {
+        if (skyjoLobbyData.GameState == (int)GameState.Start)
+        {
+            DrawnCardIsNew = isNewCard;
+            DrawnCard = newCard;
+            skyjoLobbyData.GameState = (int)GameState.DrawCard;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async void ChangeCard(SkyjoCard selectedCard)
+    {
+        var oldCard = new SkyjoCard() { Value = selectedCard.Value };
+        LastDroppedCard = new SkyjoCard() { Value = selectedCard.Value };
+        selectedCard.Value = DrawnCard.Value;
+        selectedCard.IsTurned = true;
+        if (DrawnCardIsNew)
+        {
+            CardStack.RemoveAt(0);
+        }
+        else
+        {
+            LastDroppedCard = oldCard;
+        }
+
+        skyjoLobbyData.GameState = (int)GameState.ChangeCard;
+        DrawnCard = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void RejectCard()
+    {
+        if (DrawnCard != null)
+        {
+            LastDroppedCard = DrawnCard;
+            DrawnCard = null;
+            skyjoLobbyData.GameState = (int)GameState.RejectCard;
+        }
+    }
+}

@@ -1,4 +1,4 @@
-﻿@page "/buzzer"
+﻿@page "/skyjo"
 @rendermode InteractiveServer
 @using Microsoft.AspNetCore.SignalR
 @using Microsoft.AspNetCore.SignalR.Client
@@ -6,8 +6,8 @@
 @using QuizApp.Services
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
-@inject BuzzerLobbyManagementService BuzzerService
 @inject GeneralLobbyService LobbyService
+@inject SkyjoService SkyjoService
 
 <div class="container-sm buzzer-index-container">
     <h1 class="title-centered">Buzzer</h1>
@@ -38,8 +38,8 @@
 
 
 @code {
-    private string hostUrl = "/buzzer/host/";
-    private string playUrl = "/buzzer/play/";
+    private string hostUrl = "/skyjo/";
+    private string playUrl = "/skyjo/";
     private string lobbyCode = "";
     private string joinLobbyCode = "";
     private bool hostingFailed = false;
@@ -89,15 +89,15 @@
             }
 
         }
-        LobbyService.AddLobby(lobbyCode, userID, (int)GeneralLobbyService.LobbyTypeEnum.Buzzer);
-        BuzzerService.AddLobbyBuzzData(lobbyCode);
+        LobbyService.AddLobby(lobbyCode, userID, (int)GeneralLobbyService.LobbyTypeEnum.Skyjo);
+        SkyjoService.AddLobbySkyjoData(lobbyCode);
         Navigation.NavigateTo(hostUrl + lobbyCode);
     }
 
     private void JoinLobby()
     {
         var lobbies = LobbyService.GetLobbies().ToList();
-        if(lobbies.FindIndex(element => element.LobbyCode == joinLobbyCode && element.LobbyType == (int)GeneralLobbyService.LobbyTypeEnum.Buzzer) < 0)
+        if(lobbies.FindIndex(element => element.LobbyCode == joinLobbyCode && element.LobbyType == (int)GeneralLobbyService.LobbyTypeEnum.Skyjo) < 0)
         {
             lobbyDoesntExist = true;
         }

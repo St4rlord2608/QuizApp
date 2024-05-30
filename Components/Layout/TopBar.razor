@@ -6,6 +6,7 @@
 @inject NavigationManager Navigation
 @inject UserService UserService
 @inject IJSRuntime JS
+@inject MainService MainService
 
 <div class="header">
     <div class="username-container input-group input-group-dark-mode">
@@ -42,6 +43,10 @@
     private string? username = "";
     private int userID;
     private User user = new User();
+    
+    protected override async Task OnInitializedAsync()
+    {
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -51,9 +56,11 @@
             string? userIDString = await JS.InvokeAsync<string>("GetFromLocalStorage", "userID");
             if (userIDString == null)
             {
-                user = UserService.CreateUser("Guest");
-                await JS.InvokeVoidAsync("AddToLocalStorage", "username", user.UserName);
-                await JS.InvokeVoidAsync("AddToLocalStorage", "userID", user.UserID);
+                if (Navigation.ToBaseRelativePath(Navigation.Uri) != "Login")
+                {
+                    Navigation.NavigateTo("/Login");
+                }
+                
                 username = user.UserName;
             }
             else if (username == null)
@@ -86,6 +93,6 @@
 
     private void UpdateUsernameDB(string username)
     {
-        UserService.UpdateUserName(userID, username);
+        UserService.UpdateUserName(user.UserID, username);
     }
 }

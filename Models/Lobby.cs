@@ -6,10 +6,9 @@ namespace QuizApp.Models
     {
         public string? LobbyCode { get; set; }
         public DateTime CreationDateTime { get; set; }
-
-        public bool IsBuzzed { get; set; }
-        public int BuzzedUserID { get; set; }
+        
         public int HostUserID { get; set; }
+        public int LobbyType { get; set; }
 
         public override string ToString() => JsonSerializer.Serialize<Lobby>(this);
     }

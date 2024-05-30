@@ -1,0 +1,34 @@
+﻿@page "/Login"
+@rendermode InteractiveServer
+@using QuizApp.Models
+@using QuizApp.Services
+@inject UserService UserService
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+
+<style>
+    .header{
+    display: none;
+    }
+</style>
+<div class="container-sm login-container">
+    <h3 class="title-centered">Login</h3>
+    <div>
+        <button class="play-as-guest-button btn btn-outline-info" @onclick="CreateUser">Play as Guest</button>
+    </div>
+    
+</div>
+
+
+@code {
+    User user = new User();
+
+    private async void CreateUser()
+    {
+        user = UserService.CreateUser("Guest");
+        await JS.InvokeVoidAsync("AddToLocalStorage", "username", user.UserName);
+        await JS.InvokeVoidAsync("AddToLocalStorage", "userID", user.UserID);
+        StateHasChanged();
+        Navigation.NavigateTo("/", true);
+    }
+}

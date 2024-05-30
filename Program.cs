@@ -21,8 +21,10 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSignalR();
 builder.Services.AddControllers();
 builder.Services.AddTransient<BuzzerLobbyManagementService>();
+builder.Services.AddTransient<SkyjoService>();
 builder.Services.AddTransient<UserService>();
 builder.Services.AddTransient<MainService>();
+builder.Services.AddTransient<GeneralLobbyService>();
 
 var app = builder.Build();
 

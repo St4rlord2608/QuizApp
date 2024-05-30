@@ -1,9 +1,5 @@
 ﻿using Microsoft.Data.SqlClient;
-using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.Blazor;
 using QuizApp.Models;
-using System.Configuration;
-using System.Data;
-using System.Text.Json;
 
 namespace QuizApp.Repositories
 {
@@ -21,59 +17,23 @@ namespace QuizApp.Repositories
 
         private string DBConnectionString;
 
-        public IEnumerable<Lobby> GetLobbies()
+        public LobbyBuzzData GetLobbyBuzzData(string lobbyCode)
         {
-            List<Lobby> lobbies = new List<Lobby>();
+            LobbyBuzzData lobbyBuzzData = new LobbyBuzzData();
             try
             {
                 using var conn = new SqlConnection(DBConnectionString);
                 {
                     conn.Open();
-                    var command = new SqlCommand("Select * FROM Lobby", conn);
-                    using SqlDataReader reader = command.ExecuteReader();
-                    {
-                        while (reader.Read())
-                        {
-                            Lobby lobby = new Lobby();
-                            lobby.LobbyCode = reader.GetValue(reader.GetOrdinal("LobbyCode")).ToString();
-                            lobby.CreationDateTime = (DateTime)reader.GetValue(reader.GetOrdinal("CreationDateTime"));
-                            lobby.IsBuzzed = (bool)reader.GetValue(reader.GetOrdinal("IsBuzzed"));
-                            lobby.BuzzedUserID = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("BuzzedUserID")));
-                            lobby.HostUserID = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("HostUserID")));
-                            lobbies.Add(lobby);
-
-                        }
-                        conn.Close();
-                        return lobbies;
-                    }
-                    
-                }
-                
-            }catch (Exception ex)
-            {
-                return lobbies;
-            }
-        }
-
-        public Lobby GetLobby(string lobbyCode)
-        {
-            Lobby lobby = new Lobby();
-            try
-            {
-                using var conn = new SqlConnection(DBConnectionString);
-                {
-                    conn.Open();
-                    var command = new SqlCommand("Select * FROM Lobby WHERE LobbyCode = @LobbyCode", conn);
+                    var command = new SqlCommand("Select * FROM LobbyBuzzData WHERE LobbyCode = @LobbyCode", conn);
                     command.Parameters.AddWithValue("@LobbyCode", lobbyCode);
                     using SqlDataReader reader = command.ExecuteReader();
                     {
                         while (reader.Read())
                         {
-                            lobby.LobbyCode = reader.GetValue(reader.GetOrdinal("LobbyCode")).ToString();
-                            lobby.CreationDateTime = (DateTime)reader.GetValue(reader.GetOrdinal("CreationDateTime"));
-                            lobby.IsBuzzed = (bool)reader.GetValue(reader.GetOrdinal("IsBuzzed"));
-                            lobby.BuzzedUserID = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("BuzzedUserID")));
-                            lobby.HostUserID = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("HostUserID")));
+                            lobbyBuzzData.LobbyCode = reader.GetValue(reader.GetOrdinal("LobbyCode")).ToString();
+                            lobbyBuzzData.IsBuzzed = (bool)reader.GetValue(reader.GetOrdinal("IsBuzzed"));
+                            lobbyBuzzData.BuzzedUserID = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("BuzzedUserID")));
                         }
                         conn.Close();
                     }
@@ -84,29 +44,7 @@ namespace QuizApp.Repositories
             catch (Exception ex)
             {
             }
-            return lobby;
-        }
-
-        public void DeleteLobby(string lobbyCode)
-        {
-            try
-            {
-                using var conn = new SqlConnection(DBConnectionString);
-                {
-                    conn.Open();
-                    var command = new SqlCommand("DELETE FROM BuzzerLobby WHERE LobbyCode = @LobbyCode", conn);
-                    command.Parameters.AddWithValue("@LobbyCode", lobbyCode);
-                    command.ExecuteNonQuery();
-                    command.CommandText = "DELETE FROM LOBBY WHERE LobbyCode = @LobbyCode";
-                    command.ExecuteNonQuery();
-                    conn.Close() ;
-                }
-
-            }
-            catch (Exception ex)
-            {
-                
-            }
+            return lobbyBuzzData;
         }
 
         public void DeleteBuzzerLobby(string lobbyCode, int userID)
@@ -164,38 +102,15 @@ namespace QuizApp.Repositories
             }
         }
 
-        public void UpdateLobbyCreationDateTime(string lobbyCode, DateTime creationDateTime)
+        public void AddLobbyBuzzData(string lobbyCode)
         {
             try
             {
                 using var conn = new SqlConnection(DBConnectionString);
                 {
                     conn.Open();
-                    var command = new SqlCommand("UPDATE Lobby SET CreationDateTime = @CreationDateTime WHERE LobbyCode = @LobbyCode", conn);
+                    var command = new SqlCommand("INSERT INTO LobbyBuzzData(LobbyCode) VALUES(@LobbyCode)", conn);
                     command.Parameters.AddWithValue("@LobbyCode", lobbyCode);
-                    command.Parameters.AddWithValue("@CreationDateTime", creationDateTime.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-                    command.ExecuteNonQuery();
-                    conn.Close();
-                }
-
-            }
-            catch (Exception ex)
-            {
-
-            }
-        }
-
-        public void AddLobby(string lobbyCode, DateTime creationDateTime, int hostUserID)
-        {
-            try
-            {
-                using var conn = new SqlConnection(DBConnectionString);
-                {
-                    conn.Open();
-                    var command = new SqlCommand("INSERT INTO Lobby(LobbyCode, CreationDateTime, HostUserID) VALUES(@LobbyCode, @CreationDateTime, @HostUserID)", conn);
-                    command.Parameters.AddWithValue("@LobbyCode", lobbyCode);
-                    command.Parameters.AddWithValue("@CreationDateTime", creationDateTime.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-                    command.Parameters.AddWithValue("@HostUserID", hostUserID);
                     command.ExecuteNonQuery();
                     conn.Close();
                 }
@@ -214,7 +129,7 @@ namespace QuizApp.Repositories
                 using var conn = new SqlConnection(DBConnectionString);
                 {
                     conn.Open();
-                    var command = new SqlCommand("UPDATE Lobby SET IsBuzzed = @isBuzzed, BuzzedUserID = @BuzzedUserID WHERE LobbyCode = @LobbyCode", conn);
+                    var command = new SqlCommand("UPDATE LobbyBuzzData SET IsBuzzed = @isBuzzed, BuzzedUserID = @BuzzedUserID WHERE LobbyCode = @LobbyCode", conn);
                     command.Parameters.AddWithValue("@LobbyCode", lobbyCode);
                     command.Parameters.AddWithValue("@IsBuzzed", isBuzzed);
                     command.Parameters.AddWithValue("@BuzzedUserID", userID);
